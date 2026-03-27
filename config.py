@@ -14,6 +14,8 @@ class Settings(BaseSettings):
     CHANEL_ID: int
     SHOP_ID: int
     SHOP_SECRET_KEY: SecretStr
+    WEBHOOK_URL: str
+    SECRET_MAX: str
 
 
     @computed_field
