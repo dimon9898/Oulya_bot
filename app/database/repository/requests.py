@@ -36,7 +36,7 @@ async def get_all_courses(db: AsyncSession, user_id: int):
 
 
     purchase_result = await db.scalars(select(Purchase.course_id)
-                                       .where(Purchase.user_id)
+                                       .where(Purchase.user_id == user.id)
                                        .where(Purchase.payment_status == 'payment.succeeded'))
     
     purchase_ids = purchase_result.all()
