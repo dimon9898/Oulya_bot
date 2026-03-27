@@ -39,7 +39,7 @@ async def max_webhook(request: Request) -> JSONResponse:
 
 @router.post('/yookassa/webhook', status_code=status.HTTP_200_OK)
 async def ykassa_webhook(request: Request, task: BackgroundTasks, session: AsyncSession = Depends(get_db)):
-    payload = request.json()
+    payload = await request.json()
     
     if payload.get('event') == 'payment.succeeded':
         task.add_task(payment_notify, session, payload)
