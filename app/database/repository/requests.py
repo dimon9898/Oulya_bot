@@ -130,7 +130,7 @@ async def get_user_purchased_courses(db: AsyncSession, user_id: int):
                                         .options(selectinload(Purchase.course))
                                         .where(Purchase.user_id == user.id)
                                         .where(Purchase.payment_status == 'payment.succeeded'))
-    purchases = purchases_result.first()
+    purchases = purchases_result.all()
 
     if not purchases:
         return False
