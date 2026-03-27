@@ -195,7 +195,7 @@ async def client_course_info(event: MessageCallback, session: AsyncSession):
                                        await kb.course_buy_kb(course_id),
                                        AttachmentUpload(
                                            type=UploadType.IMAGE,
-                                           payload=course.photo_url
+                                           payload=AttachmentPayload(token=course.photo_url)
                                        )
                                    ],
                                   parse_mode=ParseMode.HTML)
