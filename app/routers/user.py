@@ -234,6 +234,24 @@ async def click_buy_course_func(event: MessageCallback, session: AsyncSession):
 
 
 
+@user.message_callback(F.callback.payload == 'client_my_purchases')
+async def client_my_purchases(event: MessageCallback, session: AsyncSession):
+    await event.message.delete()
+    purchases = await rq.get_user_purchased_courses(session, event.from_user.user_id)
+
+    if purchases:
+        response = (
+            '<b>📚 Мои курсы</b>\n\n'
+        )
+    else:
+        response = (
+            '<b>📚 Мои курсы</b>\n\n'
+            f'<i>У вас нет купленных курсов</i>'
+        )
+
+    await event.message.answer(text=response, attachments=[
+                                                await kb.purchased_courses_kb(purchases) 
+                                            ], parse_mode=ParseMode.HTML)
 
 
 

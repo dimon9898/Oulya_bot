@@ -1,6 +1,10 @@
+import asyncio
+from maxapi.enums.parse_mode import ParseMode
 from app.bot_init import bot
 from app.database.repository.requests import update_payment_status
 from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.keyboards.user_kb import my_courses_kb
 
 async def payment_notify(session: AsyncSession, payload: dict):
     if payload.get('event') == 'payment.succeeded':
@@ -12,6 +16,15 @@ async def payment_notify(session: AsyncSession, payload: dict):
 
         success = await update_payment_status(session, payment_id, payment_status)
         if success:
-            await bot.send_message(user_id=user_id, text='Платеж успешно выполнен!')
+            await asyncio.sleep(3)
+            await bot.send_message(user_id=user_id, text='<bПлатеж успешно выполнен!</b>'
+                                                        f'<b>Номер платежа:</b> <code>{payment_id}</code>',
+                                                        parse_mode=ParseMode.HTML
+                                                        )
+            await asyncio.sleep(2)
+            await bot.send_message(user_id=user_id, text='Ваш курс ждет вас в <b>"Мои курсы"</b>',
+                                                        attachments=[
+                                                            await my_courses_kb(),
+                                                        ], parse_mode=ParseMode.HTML)
         else:
             await bot.send_message(user_id=user_id, text='Ошибка при обновление платежа!')

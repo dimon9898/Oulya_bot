@@ -25,14 +25,36 @@ async def add_user(db: AsyncSession, user_id: int, came_from: str):
     return True
 
 
-async def get_all_courses(db: AsyncSession):
-    result = await db.scalars(select(Course).where(Course.is_active == True))
-    courses = result.all()
+async def get_all_courses(db: AsyncSession, user_id: int):
 
-    if not courses:
-        return False
+    user_result = await db.scalars(select(User).where(User.user_id == user_id))
+    user = user_result.first()
+
+    if not user:
+        raise  
     
-    return courses
+
+
+    purchase_result = await db.scalars(select(Purchase.course_id)
+                                       .where(Purchase.user_id)
+                                       .where(Purchase.payment_status == 'payment.succeeded'))
+    
+    purchase_ids = purchase_result.all()
+
+    if not purchase_ids:
+        result = await db.scalars(select(Course).where(Course.is_active == True))
+        courses = result.all()
+
+        if not courses:
+            return False
+        
+        return courses
+    
+    courses_result = await db.scalars(select(Course)
+                                      .where(Course.id.not_in(purchase_ids))
+                                      .where(Course.is_active == True))
+    
+    return courses_result.all()
 
 
 async def get_course_info(db: AsyncSession, course_id: int):
@@ -95,3 +117,22 @@ async def update_payment_status(db: AsyncSession, payment_id: str, payment_statu
 
     await db.commit()
     return True
+
+
+async def get_user_purchased_courses(db: AsyncSession, user_id: int):
+    user_result = await db.scalars(select(User).where(User.user_id == user_id))
+    user = user_result.first()
+
+    if not user:
+        raise  
+    
+    purchases_result = await db.scalars(select(Purchase)
+                                        .options(selectinload(Purchase.course))
+                                        .where(Purchase.user_id == user.id)
+                                        .where(Purchase.payment_status == 'payment.succeeded'))
+    purchases = purchases_result.first()
+
+    if not purchases:
+        return False
+    
+    return purchases

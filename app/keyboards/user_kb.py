@@ -84,3 +84,19 @@ async def social_kbs():
     kb.add(LinkButton(text='📱 Instagram', url='https://www.instagram.com/hobbyylei/'))
     kb.add(CallbackButton(text='⬅ назад', payload='back_to_user_main'))
     return kb.adjust(2, 1, 1).as_markup()
+
+
+async def my_courses_kb():
+    kb = InlineKeyboardBuilder()
+    kb.add(CallbackButton(text='Мои курсы', payload='client_my_purchases'))
+    kb.add(CallbackButton(text='⬅ Главное меню', payload='back_to_user_main'))
+    return kb.adjust(1).as_markup()
+
+
+async def purchased_courses_kb(purchases):
+    kb = InlineKeyboardBuilder()
+    if purchases:
+        for p in purchases:
+            kb.add(CallbackButton(text=p.course.title, payload=f'purchased_{p.id}'))
+    kb.add(CallbackButton(text='назад', payload='back_to_user_main')) 
+    return kb.adjust(1).as_markup()     
