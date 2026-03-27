@@ -12,6 +12,6 @@ async def payment_notify(session: AsyncSession, payload: dict):
 
         success = await update_payment_status(session, payment_id, payment_status)
         if success:
-            await bot.send_message(chat_id=user_id, text='Платеж успешно выполнен!')
+            await bot.send_message(user_id=user_id, text='Платеж успешно выполнен!')
         else:
-            await bot.send_message(chat_id=user_id, text='Ошибка при обновление платежа!')
+            await bot.send_message(user_id=user_id, text='Ошибка при обновление платежа!')
