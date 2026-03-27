@@ -17,8 +17,8 @@ async def payment_notify(session: AsyncSession, payload: dict):
         success = await update_payment_status(session, payment_id, payment_status)
         if success:
             await asyncio.sleep(3)
-            await bot.send_message(user_id=user_id, text='<bПлатеж успешно выполнен!</b>'
-                                                        f'<b>Номер платежа:</b> <code>{payment_id}</code>',
+            await bot.send_message(user_id=user_id, text='<b>Платеж успешно выполнен!</b>\n\n'
+                                   f'<b>Номер платежа:</b> <code>{payment_id}</code>',
                                                         parse_mode=ParseMode.HTML
                                                         )
             await asyncio.sleep(2)
