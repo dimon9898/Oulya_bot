@@ -147,7 +147,7 @@ async def client_course_check_subscription(event: MessageCallback):
 @user.message_callback(F.callback.payload == 'client_paid_courses')
 async def client_paid_courses(event: MessageCallback, session: AsyncSession):
     await event.message.delete()
-    courses = await rq.get_all_courses(session)
+    courses = await rq.get_all_courses(session, event.from_user.user_id)
     
     member = await event.bot.get_chat_member(
         chat_id=settings.CHANEL_ID, 
