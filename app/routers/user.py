@@ -215,7 +215,7 @@ async def client_course_info(event: MessageCallback, session: AsyncSession):
     if course.photo_type == 'nul':
         await event.message.answer(text=course_text, 
                                    attachments=[
-                                       await kb.course_kb(course_id)
+                                       await kb.course_buy_kb(course_id)
                                    ],
                                       parse_mode=ParseMode.HTML)
 
