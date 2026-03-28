@@ -158,11 +158,11 @@ async def free_course_items(event: MessageCallback, session: AsyncSession):
     for i, video in enumerate(items, start=1):
         caption = (
             f'<b>{video.course.title}</b>\n\n'
-            f'№: {i} {video.name}\n\n'
-            f'Описание: {video.description}'
+            f'<b>№: {i} {video.name}</b>\n\n'
+            f'<b>Описание:</b> {video.description}'
         )
 
-        await asyncio.sleep(2)
+        await asyncio.sleep(1)
 
         await event.message.answer(text=caption, 
                                    attachments=[
@@ -170,7 +170,7 @@ async def free_course_items(event: MessageCallback, session: AsyncSession):
                                            type=UploadType.VIDEO,
                                            payload=AttachmentPayload(token=video.url)
                                        )
-                                   ])
+                                   ], parse_mode=ParseMode.HTML)
 
 
 

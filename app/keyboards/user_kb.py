@@ -42,8 +42,13 @@ async def client_free_sign_subscription_kb(session, member):
         kb.add(CallbackButton(text=f'{free_course.title}', payload=f'free_course_{free_course.id}'))
 
     kb.add(CallbackButton(text='⬅ назад', payload='back_to_user_main'))
-    return kb.adjust(2, 1).as_markup()
 
+    if member is None:
+        kb.adjust(2, 1)
+    else:
+        kb.adjust(1)
+
+    return kb.as_markup()   
 
 async def client_courses_sign_subscription_kb():
     kb = InlineKeyboardBuilder()
