@@ -121,7 +121,7 @@ async def client_free_lesson(event: MessageCallback, session: AsyncSession):
                                         '<b>"✅ Я подписался"</b>',
                                         attachments=[
                                             await kb.client_free_sign_subscription_kb(session, member)
-                                        ])
+                                        ], parse_mode=ParseMode.HTML)
     else:
         await event.message.answer('<b>🎁 Бесплатный урок</b>\n\n'
                                         '🎁 Держи подарок от нас!\n\n'
@@ -130,7 +130,7 @@ async def client_free_lesson(event: MessageCallback, session: AsyncSession):
                                         'мастер-класс в подарок 🎨',
                                         attachments=[
                                             await kb.client_free_sign_subscription_kb(session, member)
-                                        ])
+                                        ], parse_mode=ParseMode.HTML)
     
 
 
@@ -146,7 +146,7 @@ async def client_course_check_subscription(event: MessageCallback):
                                    ])
         return
     
-    await client_free_lesson(event)
+    await client_free_lesson(event, session)
 
 
 @user.message_callback(F.callback.payload.startswith('free_course_'))
