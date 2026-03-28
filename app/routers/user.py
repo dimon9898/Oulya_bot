@@ -1,3 +1,4 @@
+import asyncio
 from maxapi.types import MessageCreated, MessageCallback, BotStarted
 from maxapi import Router, F
 from maxapi.types.attachments.upload import AttachmentPayload, AttachmentUpload
@@ -55,6 +56,8 @@ async def send_welcome(chat_id, bot):
                                                     ),
                                                     await kb.user_start_kb()
                                                 ])
+    
+
 
 @user.message_callback(F.callback.payload == 'user_start')
 async def start_handler(event: MessageCallback):
@@ -100,10 +103,11 @@ async def whats_in_the_chanel(event: MessageCallback):
                                             attachments=[
                                                 await kb.what_is_chanel_kb()
                                             ])
+    
 
 
 @user.message_callback(F.callback.payload == 'client_free_lesson')
-async def client_free_lesson(event: MessageCallback):
+async def client_free_lesson(event: MessageCallback, session: AsyncSession):
     await event.message.delete()
     member = await event.bot.get_chat_member(chat_id=settings.CHANEL_ID, user_id=event.from_user.user_id)
     if member is None:
@@ -116,14 +120,17 @@ async def client_free_lesson(event: MessageCallback):
                                         '<b>канал и нажми на кнопку</b>\n'
                                         '<b>"✅ Я подписался"</b>',
                                         attachments=[
-                                            await kb.client_free_sign_subscription_kb()
+                                            await kb.client_free_sign_subscription_kb(session, member)
                                         ])
     else:
         await event.message.answer('<b>🎁 Бесплатный урок</b>\n\n'
                                         '🎁 Держи подарок от нас!\n\n'
                                         'Специально для тех, кто только что\n'
                                         'открыл наш набор — бесплатный\n'
-                                        'мастер-класс в подарок 🎨')
+                                        'мастер-класс в подарок 🎨',
+                                        attachments=[
+                                            await kb.client_free_sign_subscription_kb(session, member)
+                                        ])
     
 
 
@@ -140,6 +147,31 @@ async def client_course_check_subscription(event: MessageCallback):
         return
     
     await client_free_lesson(event)
+
+
+@user.message_callback(F.callback.payload.startswith('free_course_'))
+async def free_course_items(event: MessageCallback, session: AsyncSession):
+    await event.message.delete()
+    course_id = int(event.callback.payload.split('_')[2])
+    items = await rq.get_course_items(session, course_id)
+
+    for i, video in enumerate(items, start=1):
+        caption = (
+            f'<b>{video.course.title}</b>\n\n'
+            f'№: {i} {video.name}\n\n'
+            f'Описание: {video.description}'
+        )
+
+        await asyncio.sleep(2)
+
+        await event.message.answer(text=caption, 
+                                   attachments=[
+                                       AttachmentUpload(
+                                           type=UploadType.VIDEO,
+                                           payload=AttachmentPayload(token=video.url)
+                                       )
+                                   ])
+
 
 
 

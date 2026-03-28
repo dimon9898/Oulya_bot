@@ -136,3 +136,25 @@ async def get_user_purchased_courses(db: AsyncSession, user_id: int):
         return False
     
     return purchases
+
+
+
+async def get_free_course(db: AsyncSession):
+    result = await db.scalars(select(Course).where(Course.id == 1))
+    course = result.first()
+
+    if not course:
+        return False
+    
+    return course
+
+
+async def get_course_items(db: AsyncSession, course_id: int):
+    result = await db.scalars(select(CourseItem)
+                              .options(selectinload(CourseItem.course))
+                              .where(CourseItem.category_id == course_id)
+                              .order_by(CourseItem.id.asc()))
+    
+    course_items = result.all()
+    
+    return course_items

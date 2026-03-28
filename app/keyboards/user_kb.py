@@ -32,13 +32,16 @@ async def what_is_chanel_kb():
     return kb.adjust(1).as_markup()
 
 
-async def client_free_sign_subscription_kb():
+async def client_free_sign_subscription_kb(session, member):
     kb = InlineKeyboardBuilder()
+    if member is None:
+        kb.add(LinkButton(text='📢 Подписаться на канал', url=settings.CHANEL_LINK))
+        kb.add(CallbackButton(text='✅ Я подписался', payload='client_free_check_subscription'))
+    else:
+        free_course = await rq.get_free_course(session)
+        kb.add(CallbackButton(text=f'{free_course.title}', payload=f'free_course_{free_course.id}'))
 
-    kb.add(LinkButton(text='📢 Подписаться на канал', url=settings.CHANEL_LINK))
-    kb.add(CallbackButton(text='✅ Я подписался', payload='client_free_check_subscription'))
     kb.add(CallbackButton(text='⬅ назад', payload='back_to_user_main'))
-
     return kb.adjust(2, 1).as_markup()
 
 
