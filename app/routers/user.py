@@ -136,7 +136,7 @@ async def client_free_lesson(event: MessageCallback, session: AsyncSession):
 
 
 @user.message_callback(F.callback.payload == 'client_free_check_subscription')
-async def client_course_check_subscription(event: MessageCallback):
+async def client_course_check_subscription(event: MessageCallback, session: AsyncSession):
     member = await event.bot.get_chat_member(chat_id=settings.CHANEL_ID, user_id=event.from_user.user_id)
     if member is None:
         await event.message.delete()
