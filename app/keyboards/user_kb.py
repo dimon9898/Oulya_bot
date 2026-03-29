@@ -100,6 +100,6 @@ async def purchased_courses_kb(purchases):
     kb = InlineKeyboardBuilder()
     if purchases:
         for p in purchases:
-            kb.add(CallbackButton(text=p.course.title, payload=f'purchased_{p.id}'))
+            kb.add(CallbackButton(text=p.course.title, payload=f'purchased_{p.course_id}'))
     kb.add(CallbackButton(text='назад', payload='back_to_user_main')) 
     return kb.adjust(1).as_markup()     
