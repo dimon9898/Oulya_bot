@@ -300,8 +300,7 @@ async def purchased_course_items(event: MessageCallback, session: AsyncSession):
             caption = (f'<b>№ {i}</b>')
         else:
             caption = (
-                f'<b>{video.course.title}</b>\n\n'
-                f'<b>№ {i}</b>\n\n'
+                f'<b>№ {i} {video.course.title}</b>\n\n'
                 f'<b>Название: {video.name}</b>\n'
                 f'<b>Описание: {video.description}</b>'
             )
