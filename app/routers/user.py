@@ -288,6 +288,44 @@ async def client_my_purchases(event: MessageCallback, session: AsyncSession):
 
 
 
+@user.message_callback(F.callback.payload.startswith('purchased_'))
+async def purchased_course_items(event: MessageCallback, session: AsyncSession):
+    await event.message.delete()
+    course_id = int(event.callback.payload.split('_')[1])
+    items = await rq.get_course_items(session, course_id)
+
+    for i, video in enumerate(items, start=1):
+        if video.name == 'null':
+            caption = (f'<b>№ {i}</b>')
+        else:
+            caption = (
+                f'<b>{video.course.title}</b>\n\n'
+                f'<b>№ {i}</b>\n\n'
+                f'<b>Название: {video.name}</b>\n'
+                f'<b>Описание: {video.description}</b>'
+            )
+
+        if video.template_url and video.template_url != 'null':
+            await event.message.answer(text=caption,
+                                       attachments=[
+                                           AttachmentUpload(
+                                               type=UploadType.VIDEO,
+                                               payload=AttachmentPayload(token=video.url)
+                                           ),
+                                           AttachmentUpload(
+                                               type=UploadType.IMAGE,
+                                               payload=AttachmentPayload(token=video.template_url)
+                                           )
+                                       ])
+        else:
+            await event.message.answer(text=caption, 
+                                       attachments=[
+                                           AttachmentUpload(
+                                               type=UploadType.VIDEO,
+                                               payload=AttachmentPayload(token=video.url)
+                                           )
+                                       ])            
+            
 
 
 
