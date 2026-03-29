@@ -294,7 +294,7 @@ async def purchased_course_items(event: MessageCallback, session: AsyncSession):
     course_id = int(event.callback.payload.split('_')[1])
     items = await rq.get_course_items(session, course_id)
     
-    
+
     for i, video in enumerate(items, start=1):
         if video.name == 'null':
             caption = (f'<b>№ {i}</b>')
@@ -307,6 +307,7 @@ async def purchased_course_items(event: MessageCallback, session: AsyncSession):
             )
 
         if video.template_url and video.template_url != 'null':
+            await asyncio.sleep(2)
             await event.message.answer(text=caption,
                                        attachments=[
                                            AttachmentUpload(
@@ -317,15 +318,16 @@ async def purchased_course_items(event: MessageCallback, session: AsyncSession):
                                                type=UploadType.IMAGE,
                                                payload=AttachmentPayload(token=video.template_url)
                                            )
-                                       ])
+                                       ], pase_mode=ParseMode.HTML)
         else:
+            await asyncio.sleep(2)
             await event.message.answer(text=caption, 
                                        attachments=[
                                            AttachmentUpload(
                                                type=UploadType.VIDEO,
                                                payload=AttachmentPayload(token=video.url)
                                            )
-                                       ])            
+                                       ], parse_mode=ParseMode.HTML)            
             
 
 
