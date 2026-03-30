@@ -317,7 +317,7 @@ async def purchased_course_items(event: MessageCallback, session: AsyncSession):
                                                type=UploadType.IMAGE,
                                                payload=AttachmentPayload(token=video.template_url)
                                            )
-                                       ], pase_mode=ParseMode.HTML)
+                                       ], parse_mode=ParseMode.HTML)
         else:
             await asyncio.sleep(2)
             await event.message.answer(text=caption, 
