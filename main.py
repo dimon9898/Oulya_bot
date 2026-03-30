@@ -2,19 +2,20 @@ from fastapi import FastAPI
 from contextlib import asynccontextmanager
 from app.api import webhooks
 from app.bot_init import bot, dp
+from app.bot_init import bot_set_commands
 from app.database.db_init import DbSessionMiddleware, async_session
 from app.routers.user import user
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Подключаем роутеры и middleware
+    await bot_set_commands()
     dp.include_routers(user)
     dp.middleware(DbSessionMiddleware(async_session))
-    # Инициализируем диспетчер
     await dp._Dispatcher__ready(bot)
+
     yield
-    # Завершение
+
     await bot.session.close()
 
 
