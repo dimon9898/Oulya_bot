@@ -7,7 +7,7 @@ from config import settings
 
 admin = Router()
 
-admin.filters.append(F.from_user.id.in_(settings.ADMIN_IDS))
+admin.filters.append(F.from_user.user_id.in_(settings.ADMIN_IDS))
 
 @admin.message_created(Command('admin'))
 async def cmd_admin(event: MessageCreated):
