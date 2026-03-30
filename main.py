@@ -5,12 +5,13 @@ from app.bot_init import bot, dp
 from app.bot_init import bot_set_commands
 from app.database.db_init import DbSessionMiddleware, async_session
 from app.routers.user import user
+from app.routers.admin import admin
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await bot_set_commands()
-    dp.include_routers(user)
+    dp.include_routers(user, admin)
     dp.middleware(DbSessionMiddleware(async_session))
     await dp._Dispatcher__ready(bot)
 

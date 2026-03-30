@@ -24,4 +24,3 @@ class Deeplink:
             return cls.decode(parts[1])
 
 
-print(Deeplink.generate('Ozon'))
