@@ -1,13 +1,21 @@
 from maxapi import Router, F
 from maxapi.types import MessageCreated, MessageCallback, Command
+from maxapi.filters.filter import BaseFilter
+
 
 from config import settings
 
 
+class IsAdmin(BaseFilter):
+    async def __call__(self, event: MessageCreated):
+        if event.from_user is None:
+            return False
+        
+        return event.from_user.user_id in settings.ADMIN_IDS
+
 
 admin = Router()
 
-@admin.message_created(F.message.body.text == '/admin')
+@admin.message_created(Command('admin'), IsAdmin())
 async def cmd_admin(event: MessageCreated):
-    if event.from_user.user_id in settings.ADMIN_IDS:
-        await event.message.answer('Доступ к админ-панели разрешён!')
+    await event.message.answer('Доступ к админ-панели разрешён!')
