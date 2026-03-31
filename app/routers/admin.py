@@ -1,5 +1,6 @@
 from maxapi import Router, F
-from maxapi.types import MessageCreated, MessageCallback, Command
+from maxapi.types import MessageCreated, MessageCallback
+from maxapi.filters.command import Command
 from maxapi.filters.filter import BaseFilter
 
 
@@ -7,7 +8,7 @@ from config import settings
 
 
 class IsAdmin(BaseFilter):
-    async def __call__(self, event: MessageCreated):
+    async def __call__(self, event: MessageCreated) -> bool:
         if event.from_user is None:
             return False
         
