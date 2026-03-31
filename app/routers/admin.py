@@ -3,6 +3,7 @@ from maxapi.types import MessageCreated, MessageCallback
 from maxapi.filters.command import Command
 from maxapi.filters.filter import BaseFilter
 
+import app.keyboards.admin_kb as kb
 
 from config import settings
 
@@ -19,4 +20,4 @@ admin = Router()
 
 @admin.message_created(Command('admin'), IsAdmin())
 async def cmd_admin(event: MessageCreated):
-    await event.message.answer('Доступ к админ-панели разрешён!')
+    await event.message.answer('Доступ к админ-панели разрешён!', attachments=[await kb.admin_panel_kb()])

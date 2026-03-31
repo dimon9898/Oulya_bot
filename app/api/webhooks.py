@@ -22,27 +22,18 @@ router = APIRouter()
 @router.post('/webhook')
 async def max_webhook(request: Request) -> JSONResponse:
     event_json = await request.json()
-    
-    # ВРЕМЕННО — смотрим сырой payload
-    print("RAW EVENT:", event_json)
-    
     event_object = await process_update_webhook(event_json=event_json, bot=bot)
-    
+
     if event_object is None:
-        print("EVENT OBJECT IS NONE")
         return JSONResponse(content={'ok': True}, status_code=200)
-    
-    # ВРЕМЕННО — смотрим что распарсилось
-    print("EVENT TYPE:", event_object.update_type)
-    print("FROM_USER:", event_object.from_user)
-    print("MESSAGE BODY:", getattr(event_object.message, 'body', 'NO BODY'))
-    
+
     if dp.use_create_task:
         asyncio.create_task(dp.handle(event_object))
     else:
         await dp.handle(event_object)
-    
+
     return JSONResponse(content={'ok': True}, status_code=200)
+
 
 
 
