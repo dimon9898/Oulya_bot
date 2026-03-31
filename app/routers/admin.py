@@ -35,7 +35,9 @@ async def cmd_admin(event: MessageCreated):
 
 @admin.message_callback(F.callback.payload == 'back_to_admin_main')
 async def back_to_admin_main(event: MessageCallback):
-    await cmd_admin(event.message)
+    await event.message.delete()
+    await event.message.answer('Доступ к админ-панели разрешён!', 
+                                attachments=[await kb.admin_panel_kb()])
 
 @admin.message_callback(F.callback.payload == 'admin_contest')
 async def admin_contest(event: MessageCallback, session: AsyncSession):
