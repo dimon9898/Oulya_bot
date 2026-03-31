@@ -29,6 +29,8 @@ async def update_contest_state(db: AsyncSession, action: str) -> bool:
         return contest
     
     contest.description = action
+    contest.enabled = True
+    
     await db.commit()
     await db.refresh(contest)
 
