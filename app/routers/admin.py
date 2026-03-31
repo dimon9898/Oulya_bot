@@ -7,6 +7,7 @@ from config import settings
 
 admin = Router()
 
-@admin.message_created(F.from_user.user_id.in_(settings.ADMIN_IDS))
+@admin.message_created()
 async def cmd_admin(event: MessageCreated):
-    await event.message.answer('Доступ к админ-панели разрешён!')
+    if event.from_user.user_id in settings.ADMIN_IDS:
+        await event.message.answer('Доступ к админ-панели разрешён!')
