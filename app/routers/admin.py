@@ -51,7 +51,7 @@ async def admin_contest(event: MessageCallback, session: AsyncSession):
 
 
 @admin.message_callback(F.callback.payload.startswith('contest_'))
-async def contest_state(event: MessageCallback, session: AsyncSession, state: MemoryContext):
+async def contest_state(event: MessageCallback, session: AsyncSession, context: MemoryContext):
     action = event.callback.payload.split('_')[1]
     await event.message.delete()
 
@@ -62,13 +62,13 @@ async def contest_state(event: MessageCallback, session: AsyncSession, state: Me
                                        attachments=[await kb.contest_kb(contest.enabled)])
     elif action == 'on':
         await event.message.answer('Введите описание конкурса...')
-        await state.set_state(Form.description)
+        await context.set_state(Form.description)
 
 
 @admin.message_created(Form.description, F.message.body.text)
-async def update_contest_description(event: MessageCreated, session: AsyncSession, state: MemoryContext):
-    await state.update_data(description=event.message.body.text)
-    data = await state.get_data()
+async def update_contest_description(event: MessageCreated, session: AsyncSession, context: MemoryContext):
+    await context.update_data(description=event.message.body.text)
+    data = await context.get_data()
     description = data.get('description', '')
     success = await rq.update_contest_state(session, description)
     if success:
@@ -78,4 +78,4 @@ async def update_contest_description(event: MessageCreated, session: AsyncSessio
     else:
         await event.message.answer('Ошибка при обновление описание конкурса!')
 
-    await state.clear()        
+    await context.clear()        
