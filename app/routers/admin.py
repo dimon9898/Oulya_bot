@@ -88,7 +88,7 @@ async def update_contest_description(event: MessageCreated, session: AsyncSessio
 @admin.message_callback(F.callback.payload == 'admin_statistics', IsAdmin())
 async def admin_statistics(event: MessageCallback, session: AsyncSession):
     await event.message.delete()
-    result = await rq.get_statistics_bot()
+    result = await rq.get_statistics_bot(session)
     count = result['count']
     total = result['total_sum']
     new_users = result['new_users']
