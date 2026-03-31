@@ -3,6 +3,7 @@ from maxapi import Router, F
 from maxapi.types import MessageCreated, MessageCallback
 from maxapi.context import MemoryContext, State, StatesGroup
 from maxapi.filters.command import Command
+from maxapi.enums.parse_mode import ParseMode
 from maxapi.filters.filter import BaseFilter
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -81,3 +82,42 @@ async def update_contest_description(event: MessageCreated, session: AsyncSessio
         await event.message.answer('Ошибка при обновление описание конкурса!')
 
     await context.clear()        
+
+
+
+@admin.message_callback(F.callback.payload == 'admin_statistics', IsAdmin())
+async def admin_statistics(event: MessageCallback, session: AsyncSession):
+    await event.message.delete()
+    result = await rq.get_statistics_bot()
+    count = result['count']
+    total = result['total_sum']
+    new_users = result['new_users']
+    payment_count = result['payment_count']
+    sources = result['sources']
+    
+    statistics_text = (
+        '📊 <b>Статистика</b>\n\n'
+        f'👥 Количество пользователей: <b>{count}</b>\n'
+        '----------------------------------------------\n'
+        f'🆕 Новых за 7 дней: +<b>{new_users}</b>\n'
+        '----------------------------------------------\n'
+        f'💰 Выручка от продажи курсов: <b>{total}</b> руб.\n'
+        '----------------------------------------------\n'
+        f'🧮 Количество платежей: <b>{payment_count}</b>\n'
+        '----------------------------------------------\n\n'
+        f'📈 Трафик от маркетплейсов:\n\n'
+    )
+
+    platform = {
+        'direct': 'Max',
+        'Wildberries': 'Wildberries',
+        'Ozon': 'Ozon'
+    }
+
+    for source, label in platform.items():
+        count = sources.get(source, 0)
+        statistics_text += f'🔶 -> {label}: {count}\n'
+        statistics_text += '----------------------------------------------\n'
+
+    
+    await event.message.answer(statistics_text, parse_mode=ParseMode.HTML)      
