@@ -42,14 +42,15 @@ async def get_statistics_bot(db: AsyncSession):
         result = await db.execute(select(func.count(User.id)).where(User.is_active == True))
         count = result.scalar() or 0
         
-        stmt = await db.execute(select(func.coalesce(func.sum(Purchase.price), 0)).where(Purchase.paid == True))
+        stmt = await db.execute(select(func.coalesce(func.sum(Purchase.price), 0))
+                                .where(Purchase.payment_status == 'payment.succeeded'))
         total_sum = stmt.scalar()
         
         week_ago = datetime.now() - timedelta(days=7)
         new_users_stmt = await db.execute(select(func.count(User.id)).where(User.create_at >= week_ago))
         new_users = new_users_stmt.scalar() or 0
         
-        pay_count = await db.execute(select(func.count(Purchase.id)).where(Purchase.paid == True))
+        pay_count = await db.execute(select(func.count(Purchase.id)).where(Purchase.payment_status == 'payment.succeeded'))
         payment_count = pay_count.scalar() or 0
 
         sources_stmt = await db.execute(select(User.came_from, func.count(User.id))
