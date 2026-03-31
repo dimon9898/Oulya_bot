@@ -355,7 +355,7 @@ async def client_social_site_func(event: MessageCallback):
                                ], parse_mode=ParseMode.HTML)
 
 
-@user.message_created()
+'''@user.message_created()
 async def get_url_photo(msg: MessageCreated):
     attachments = msg.message.body.attachments
     if not attachments:
@@ -369,4 +369,4 @@ async def get_url_photo(msg: MessageCreated):
 
         if isinstance(attachment, Video):
                 file_id = attachment.payload.token
-                await msg.message.answer(text=f'{file_id}')        
+                await msg.message.answer(text=f'{file_id}') '''       
