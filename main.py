@@ -8,6 +8,10 @@ from app.routers.user import user
 from app.routers.admin import admin
 
 
+import logging
+logging.basicConfig(level=logging.INFO)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await bot_set_commands()
