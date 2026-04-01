@@ -120,4 +120,12 @@ async def admin_statistics(event: MessageCallback, session: AsyncSession):
         statistics_text += '----------------------------------------------\n'
 
     
-    await event.message.answer(statistics_text, parse_mode=ParseMode.HTML)      
+    await event.message.answer(statistics_text, parse_mode=ParseMode.HTML,
+                               attachments=[
+                                   await kb.update_statistics_btn()
+                               ])      
+    
+
+@admin.message_callback(F.callback.payload == 'admin_update_statistics')
+async def admin_update_statistics(event: MessageCallback, session: AsyncSession):
+    await admin_statistics(event, session)    
