@@ -65,7 +65,7 @@ async def get_course_info(db: AsyncSession, course_id: int):
 
 
 
-async def create_order(db: AsyncSession, course_id: int, user_id: int):
+async def create_order(db: AsyncSession, course_id: int, user_id: int, email: str):
     user_result = await db.scalars(select(User).where(User.user_id == user_id))
     user = user_result.first()
 
@@ -89,7 +89,7 @@ async def create_order(db: AsyncSession, course_id: int, user_id: int):
 
     try:
         await db.flush()
-        payment = await create_payment_link(new_order.id, user_id, course_id, course.price)
+        payment = await create_payment_link(new_order.id, user_id, course_id, course.price, email)
     except Exception as e:
         print(f'Ошибка при создание платежа: {e}')
         await db.rollback()

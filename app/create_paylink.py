@@ -4,7 +4,7 @@ from anyio import to_thread
 
 from config import settings
 
-async def create_payment_link(order_id: int, user_id: int, course_id: int, price):
+async def create_payment_link(order_id: int, user_id: int, course_id: int, price, email: str):
     Configuration.account_id = settings.SHOP_ID
     Configuration.secret_key = settings.SHOP_SECRET_KEY.get_secret_value()
     
@@ -31,7 +31,7 @@ async def create_payment_link(order_id: int, user_id: int, course_id: int, price
 
         'receipt': {
             'customer': {
-                'email': 'dilshod.khaidkulov@gmail.com',
+                'email': email,
 
             },
 

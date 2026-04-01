@@ -7,8 +7,10 @@ from maxapi.types.attachments.video import Video
 from maxapi.enums.upload_type import UploadType
 from maxapi.enums.parse_mode import ParseMode
 from maxapi.exceptions.max import MaxApiError
+from maxapi.context import MemoryContext, State, StatesGroup
 from maxapi.filters.command import CommandStart
 from sqlalchemy.ext.asyncio import AsyncSession
+from email_validator import EmailNotValidError, validate_email
 
 import app.database.repository.requests as rq
 
@@ -18,6 +20,15 @@ from deeplink_gen import Deeplink
 
 
 user = Router()
+
+
+class EmailState(StatesGroup):
+    course_id = State()
+    email = State()
+
+
+
+
 
 
 @user.bot_started()
@@ -140,9 +151,9 @@ async def client_course_check_subscription(event: MessageCallback, session: Asyn
     member = await event.bot.get_chat_member(chat_id=settings.CHANEL_ID, user_id=event.from_user.user_id)
     if member is None:
         await event.message.delete()
-        await event.message.answer('❌ Чтобы открыть бесплатный урок необходимо подписаться на канал',
+        await event.message.answer('❌ Чтобы получить бесплатный урок необходимо подписаться на канал',
                                    attachments=[
-                                       await kb.client_free_sign_subscription_kb()
+                                       await kb.client_free_sign_subscription_kb(session, member)
                                    ])
         return
     
@@ -254,15 +265,51 @@ async def client_course_info(event: MessageCallback, session: AsyncSession):
 
 
 @user.message_callback(F.callback.payload.startswith('click_buy_course_'))
-async def click_buy_course_func(event: MessageCallback, session: AsyncSession):
+async def click_buy_course_func(event: MessageCallback, context: MemoryContext):
     await event.message.delete()
     course_id = int(event.callback.payload.split('_')[3])
+    await context.update_data(course_id=course_id)
+    await event.message.answer('Введите адрес электронной почти:',
+                               attachments=[
+                                   await kb.cancel_buying_kb()
+                               ])
+    await context.set_state(EmailState.email)
+
+
+
+@user.message_callback(EmailState.email, F.callback.payload == 'cancel_buying')
+async def cancel_buying(event: MessageCallback, session: AsyncSession, context: MemoryContext):
+    await context.clear()
+    await event.answer.delete()
+    await event.message.answer('Действие отменено. Вы можете выбрать другой курс.')
+    await asyncio.sleep(1)
+    await client_paid_courses(event, session)
+
+
+
+@user.message_created(EmailState.email, F.message.body.text)
+async def buyer_email_update(event: MessageCreated, session: AsyncSession, context: MemoryContext):
+    email_raw = event.message.body.text.strip()
+
+    try:
+        email_info = validate_email(email_raw, check_deliverability=True)
+        email = email_info.normalized
+    except EmailNotValidError:
+        await event.message.answer("❌ <b>Некорректный адрес почты.</b>\n"
+            "Пожалуйста, проверьте написание и попробуйте еще раз:",
+            parse_mode=ParseMode.HTML)
+        
+    data = await context.get_data()
+    course_id = int(data.get('course_id', ''))
     user_id = event.from_user.user_id
-    payment = await rq.create_order(session, course_id, user_id)
+    payment = await rq.create_order(session, course_id, user_id, email)
     payment_url = payment['confirmation_url']
     await event.message.answer(text='🔗 <b>Ссылка для оплаты...</b> ⬇️\n\n'
             f'<a href="{payment_url}">Перейти к оплате</a> 💳\n\n'
             '👉🏻 <i>Пожалуйста, завершите оплату по указанной ссылке.</i>', parse_mode=ParseMode.HTML)
+
+
+    await context.clear()
 
 
 

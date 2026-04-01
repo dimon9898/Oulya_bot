@@ -103,3 +103,10 @@ async def purchased_courses_kb(purchases):
             kb.add(CallbackButton(text=p.course.title, payload=f'purchased_{p.course_id}'))
     kb.add(CallbackButton(text='назад', payload='back_to_user_main')) 
     return kb.adjust(1).as_markup()     
+
+
+
+async def cancel_buying_kb():
+    kb = InlineKeyboardBuilder()
+    kb.add(CallbackButton(text='Отменить', payload='cancel_buying'))
+    return kb.adjust(1).as_markup()
