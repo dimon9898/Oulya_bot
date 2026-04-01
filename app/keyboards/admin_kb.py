@@ -22,4 +22,4 @@ async def contest_kb(is_enabled: bool):
 async def update_statistics_btn():
     kb = InlineKeyboardBuilder()
     kb.add(CallbackButton(text='♻️ Обновить', payload='admin_update_statistics'))
-    return kb.as_markup()
+    return kb.adjust(1).as_markup()
