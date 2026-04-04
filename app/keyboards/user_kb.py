@@ -11,7 +11,7 @@ async def user_start_kb():
     return kb.adjust(1).as_markup()
 
 
-async def user_main_kb(enabled):
+async def user_main_kb(enabled: bool):
     kb = InlineKeyboardBuilder()
     kb.add(CallbackButton(text='🎨 Что в канале ?', payload='whats_in_the_chanel', intent=Intent.POSITIVE))
     kb.add(CallbackButton(text='🎁 Бесплатный урок', payload='client_free_lesson', intent=Intent.POSITIVE))
