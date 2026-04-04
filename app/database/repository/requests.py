@@ -158,3 +158,14 @@ async def get_course_items(db: AsyncSession, course_id: int):
     course_items = result.all()
     
     return course_items
+
+
+
+async def get_contest_info(db: AsyncSession):
+    result = await db.scalars(select(Contest).where(Contest.id == 1))
+    contest = result.first()
+
+    if not contest:
+        return False
+
+    return contest

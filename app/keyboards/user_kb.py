@@ -11,18 +11,23 @@ async def user_start_kb():
     return kb.adjust(1).as_markup()
 
 
-async def user_main_kb():
+async def user_main_kb(enabled):
     kb = InlineKeyboardBuilder()
     kb.add(CallbackButton(text='🎨 Что в канале ?', payload='whats_in_the_chanel', intent=Intent.POSITIVE))
     kb.add(CallbackButton(text='🎁 Бесплатный урок', payload='client_free_lesson', intent=Intent.POSITIVE))
     kb.add(CallbackButton(text='💎 Платные курсы', payload='client_paid_courses', intent=Intent.POSITIVE))
     kb.add(CallbackButton(text='📚 Мои курсы', payload='client_my_purchases', intent=Intent.POSITIVE))
+    if enabled:
+        kb.add(CallbackButton(text='🏆 Конкурс месяца', payload='client_contest'))
     kb.add(CallbackButton(text='🛍 Где купить материалы', payload='client_shop', intent=Intent.POSITIVE))
     kb.add(CallbackButton(text='📱 Соц сети', payload='client_social_site', intent=Intent.POSITIVE))
     kb.add(CallbackButton(text='✉️ Написать нам', payload='client_feedback', intent=Intent.POSITIVE))
     kb.add(LinkButton(text='📢 Перейти в канал', url=settings.CHANEL_LINK, intent=Intent.DEFAULT))
 
-    return kb.adjust(2, 2, 1, 2, 1).as_markup()
+    if enabled:
+        return kb.adjust(2, 2, 1, 1, 2, 1).as_markup()
+    else:
+        return kb.adjust(2, 2, 1, 2, 1).as_markup()
 
 
 async def what_is_chanel_kb():
