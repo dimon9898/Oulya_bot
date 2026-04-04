@@ -72,7 +72,6 @@ async def send_welcome(chat_id, bot):
 
 @user.message_callback(F.callback.payload == 'user_start')
 async def start_handler(event: MessageCallback, session: AsyncSession):
-    await event.message.delete()
     contest = await rq.get_contest_info(session)
     await event.bot.send_message(chat_id=event.chat.chat_id, text='👋 Привет!\n\n'
                                             'Рада, что ты здесь — значит, наш набор уже у тебя в руках 🎁\n\n'
