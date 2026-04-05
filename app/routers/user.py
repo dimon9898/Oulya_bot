@@ -403,6 +403,16 @@ async def client_social_site_func(event: MessageCallback):
                                ], parse_mode=ParseMode.HTML)
 
 
+
+@user.message_callback(F.callback.payload == 'client_contest')
+async def client_contest(event: MessageCallback, session: AsyncSession):
+    await event.message.delete()
+    contest = await rq.get_contest_info(session)
+    await event.message.answer(text=contest.description, attachments=[ await kb.client_feedback_kb()])
+
+
+
+
 '''@user.message_created()
 async def get_url_photo(msg: MessageCreated):
     attachments = msg.message.body.attachments
