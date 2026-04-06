@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.responses import RedirectResponse
 from contextlib import asynccontextmanager
 from app.api import webhooks
 from app.bot_init import bot, dp
@@ -7,6 +8,7 @@ from app.database.db_init import DbSessionMiddleware, async_session
 from app.routers.user import user
 from app.routers.admin import admin
 
+from config import settings
 
 import logging
 logging.basicConfig(level=logging.INFO)
@@ -32,4 +34,4 @@ app.include_router(webhooks.router)
 
 @app.get('/')
 async def solo():
-    return {'message': 'FastAPI ready!'}
+    return RedirectResponse(url=settings.REDIRECT_URL)

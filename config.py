@@ -17,6 +17,7 @@ class Settings(BaseSettings):
     WEBHOOK_URL: str
     SECRET_MAX: str
     ADMIN_IDS: str
+    REDIRECT_URL: str
 
 
     @computed_field
