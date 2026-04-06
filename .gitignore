@@ -2,8 +2,5 @@
 .env
 *__pycache__/
 *.pyc
-<<<<<<< HEAD
 certbot
-=======
-certbot
->>>>>>> 00fe41bd5b8e0a9497c7b62764e7a6dc87c08d55
+
