@@ -152,7 +152,7 @@ async def client_course_check_subscription(event: MessageCallback, session: Asyn
     member = await event.bot.get_chat_member(chat_id=settings.CHANEL_ID, user_id=event.from_user.user_id)
     if member is None:
         await event.message.delete()
-        await event.message.answer('❌ Чтобы получить бесплатный урок необходимо подписаться на канал',
+        await event.message.answer('❌ Чтобы получить бесплатный урок необходимо подписаться на наш канал',
                                    attachments=[
                                        await kb.client_free_sign_subscription_kb(session, member)
                                    ])
@@ -216,6 +216,21 @@ async def client_paid_courses(event: MessageCallback, session: AsyncSession):
         text=response,
         attachments=[await kb.client_courses_list_kb(courses)]
     )
+
+
+@user.message_callback(F.callback.payload == 'client_courses_check_subscription')
+async def client_course_check_subscription(event: MessageCallback, session: AsyncSession):
+    member = await event.bot.get_chat_member(chat_id=settings.CHANEL_ID, user_id=event.from_user.user_id)
+    if member is None:
+        await event.message.delete()
+        await event.message.answer('❌ Чтобы получить доступ к платным курсам необходимо подписаться на наш канал',
+                                   attachments=[
+                                       await kb.client_courses_sign_subscription_kb()
+                                   ])
+        return
+    
+    await client_paid_courses(event, session)
+
 
 
 @user.message_callback(F.callback.payload.startswith('client_course_'))
