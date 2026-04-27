@@ -22,7 +22,7 @@ async def create_payment_link(order_id: int, user_id: int, course_id: int, price
         },
 
         'capture': True,
-        'description': f'Заказ №{order_id}',
+        'description': f'Оплата для заказа №{order_id}',
         'metadata': {
             'order_id': order_id,
             'user_id': user_id,
@@ -35,8 +35,10 @@ async def create_payment_link(order_id: int, user_id: int, course_id: int, price
 
             },
 
+            'tax_system_code': 2,
+
             'items': [{
-                'description': f'Оплата за курса №{course_id}',
+                'description': f'Доступ к материалу №{course_id}',
                 'quantity': 1,
                 'amount': {
                     'value': f'{price:.2f}',
@@ -44,7 +46,7 @@ async def create_payment_link(order_id: int, user_id: int, course_id: int, price
                     },
                 'vat_code': 1,
                 'payment_mode': 'full_prepayment',
-                'payment_subject': 'commodity'    
+                'payment_subject': 'service'    
             }]
         }
     }
