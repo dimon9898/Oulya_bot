@@ -1,12 +1,13 @@
 from datetime import datetime, timezone
 from sqlalchemy.orm import selectinload
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database.models import User, Contest, Course, CourseItem, Purchase
 
 from app.create_paylink import create_payment_link
-
+from logger_init import logger
 
 async def add_user(db: AsyncSession, user_id: int, came_from: str):
     result = await db.scalars(select(User).where(User.user_id == user_id))
@@ -66,57 +67,78 @@ async def get_course_info(db: AsyncSession, course_id: int):
 
 
 async def create_order(db: AsyncSession, course_id: int, user_id: int, email: str):
-    user_result = await db.scalars(select(User).where(User.user_id == user_id))
-    user = user_result.first()
-
-    if not user:
-        print('ПОЛЬЗОВАТЕЛЬ НЕ НАЙДЕН')
-        return False
-    
-    course_result = await db.scalars(select(Course).where(Course.id == course_id, Course.is_active == True))
-    course = course_result.first()
-
-    if not course:
-        return False
-    
-
-    new_order = Purchase(
-        user_id=user.id,
-        course_id=course_id,
-        price=course.price
-    )
-    db.add(new_order)
-
     try:
-        await db.flush()
-        payment = await create_payment_link(new_order.id, user_id, course_id, course.price, email)
-    except Exception as e:
-        print(f'Ошибка при создание платежа: {e}')
+        user_result = await db.scalars(select(User).where(User.user_id == user_id))
+        user = user_result.first()
+
+        if not user:
+            print('ПОЛЬЗОВАТЕЛЬ НЕ НАЙДЕН')
+            return False
+        
+        course_result = await db.scalars(select(Course).where(Course.id == course_id, Course.is_active == True))
+        course = course_result.first()
+
+        if not course:
+            return False
+        
+
+        new_order = Purchase(
+            user_id=user.id,
+            course_id=course_id,
+            price=course.price
+        )
+        db.add(new_order)
+
+        try:
+            await db.flush()
+            payment = await create_payment_link(new_order.id, user_id, course_id, course.price, email)
+            logger.info(f'Платежная ссылка для User[{user_id}] успешно создана!')
+        except Exception as e:
+            await db.rollback()
+            logger.error(f'Ошибка при создание платежной ссылки для User[{user_id}]: {e}')
+            return False
+
+        new_order.payment_id = payment.get('payment_id')
+
+        await db.commit()
+        await db.refresh(new_order)
+
+        return payment
+    except SQLAlchemyError as sql_exc:
         await db.rollback()
+        logger.error(f'Ошибка при работе SQL: {sql_exc}')
+        return False
+    except Exception as exc:
+        await db.rollback()
+        logger.error(f'Неизвестная ошибка при создание платежа: {exc}')
         return False
 
-    new_order.payment_id = payment.get('payment_id')
-
-    await db.commit()
-    await db.refresh(new_order)
-
-    return payment
 
 
 async def update_payment_status(db: AsyncSession, payment_id: str, payment_status: str) -> bool:
-    result = await db.scalars(select(Purchase).where(Purchase.payment_id == payment_id))
-    purchase = result.first()
+    try:
+        result = await db.scalars(select(Purchase).where(Purchase.payment_id == payment_id))
+        purchase = result.first()
 
 
-    if not purchase:
-        return False
+        if not purchase:
+            logger.warning(f'Платеж по ID[{payment_id}] не найден!')
+            return False
+
+        purchase.payment_status = payment_status
+        purchase.paid_at = datetime.now(timezone.utc)
+
+        await db.commit()
+        return True
     
+    except SQLAlchemyError as sql_exc:
+        await db.rollback()
+        logger.error(f'Ошибка при работе SQL: {sql_exc}')
+        return False
+    except Exception as exc:
+        await db.rollback()
+        logger.error(f'Неизвестная ошибка при обновление статуса платежа ID[{payment_id}]: {exc}')
 
-    purchase.payment_status = payment_status
-    purchase.paid_at = datetime.now(timezone.utc)
-
-    await db.commit()
-    return True
 
 
 async def get_user_purchased_courses(db: AsyncSession, user_id: int):
