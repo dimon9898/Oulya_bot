@@ -23,4 +23,3 @@ class Deeplink:
         if len(parts) > 1:
             return cls.decode(parts[1])
 
-

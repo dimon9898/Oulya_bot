@@ -105,13 +105,15 @@ async def admin_statistics(event: MessageCallback, session: AsyncSession):
         '----------------------------------------------\n'
         f'🧮 Количество платежей: <b>{payment_count}</b>\n'
         '----------------------------------------------\n\n'
-        f'📈 Трафик от маркетплейсов:\n\n'
+        f'📈 Статистика переходов по ссылкам:\n\n'
     )
 
     platform = {
         'direct': 'Max',
         'Wildberries': 'Wildberries',
-        'Ozon': 'Ozon'
+        'Ozon': 'Ozon',
+        'Youtube': 'Youtube',
+        'Tiktok': 'TikTok'
     }
 
     for source, label in platform.items():
