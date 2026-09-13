@@ -1,13 +1,8 @@
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy import String, DateTime, BigInteger, ForeignKey, Numeric
-from sqlalchemy.ext.asyncio import AsyncAttrs
 from datetime import datetime
 
-
-
-class Base(AsyncAttrs, DeclarativeBase):
-    pass
-
+from app.database.base import Base
 
 
 class User(Base):
