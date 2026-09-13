@@ -65,7 +65,8 @@ async def _send_contest_main(event, session: AsyncSession):
 
 
 @contest.message_callback(F.callback.payload == 'client_contest')
-async def contest_main(event: MessageCallback, session: AsyncSession):
+async def contest_main(event: MessageCallback, session: AsyncSession, context: MemoryContext):
+    await context.clear()
     await event.message.delete()
     await _send_contest_main(event, session)
 
@@ -209,6 +210,7 @@ async def contest_submit_start(event: MessageCallback, session: AsyncSession, co
     except Exception as exc:
         logger.warning(f'Не удалось удалить сообщение: {exc}')
 
+    await context.clear()
     contest_obj = await crq.get_active_contest(session)
     if not contest_obj:
         await event.message.answer('Конкурс пока не настроен.',
