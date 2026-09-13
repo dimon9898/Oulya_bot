@@ -4,6 +4,7 @@ from maxapi.types import CallbackButton
 async def admin_panel_kb():
     kb = InlineKeyboardBuilder()
     kb.add(CallbackButton(text='Конкурс', payload='admin_contest'))
+    kb.add(CallbackButton(text='🏆 Управление конкурсом', payload='admin_contest_manage'))
     kb.add(CallbackButton(text='Статистика', payload='admin_statistics'))
     return kb.adjust(1).as_markup()
 
@@ -52,12 +53,12 @@ async def contest_moderation_kb(work_id: int, page: int, total_pages: int):
         nav.append(CallbackButton(text='➡', payload=f'admin_contest_page_{page + 1}'))
     if nav:
         kb.add(*nav)
-    kb.add(CallbackButton(text='⬅ назад', payload='admin_contest'))
+    kb.add(CallbackButton(text='⬅ назад', payload='admin_contest_manage'))
     return kb.adjust(1, 1, 1, len(nav) if nav else 1, 1).as_markup()
 
 
 async def contest_results_kb():
     kb = InlineKeyboardBuilder()
     kb.add(CallbackButton(text='♻️ Обновить', payload='admin_contest_results'))
-    kb.add(CallbackButton(text='⬅ назад', payload='admin_contest'))
+    kb.add(CallbackButton(text='⬅ назад', payload='admin_contest_manage'))
     return kb.adjust(1).as_markup()

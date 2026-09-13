@@ -135,4 +135,228 @@ async def admin_statistics(event: MessageCallback, session: AsyncSession):
 
 @admin.message_callback(F.callback.payload == 'admin_update_statistics')
 async def admin_update_statistics(event: MessageCallback, session: AsyncSession):
-    await admin_statistics(event, session)    
+    await admin_statistics(event, session)
+
+
+# ---------- Модерация конкурса ----------
+
+def _work_admin_caption(work) -> str:
+    category = crq.CATEGORY_LABELS.get(work.category, work.category)
+    status = crq.STATUS_LABELS.get(work.status, work.status)
+    return (
+        f'<b>Работа №{work.number:03d}</b>\n'
+        f'Автор: {work.author_name}, {work.author_age} лет ({category})\n'
+        f'Username: {work.author_username or "—"}\n'
+        f'Название: «{work.title}»\n'
+        f'Описание: {work.description or "—"}\n'
+        f'Статус: <b>{status}</b>'
+    )
+
+
+async def _send_work_card(event, work, page: int, total_pages: int):
+    await event.message.answer(
+        text=_work_admin_caption(work),
+        attachments=[
+            AttachmentUpload(
+                type=UploadType.IMAGE,
+                payload=AttachmentPayload(token=work.final_photo),
+            ),
+            AttachmentUpload(
+                type=UploadType.IMAGE,
+                payload=AttachmentPayload(token=work.process_photo),
+            ),
+            await kb.contest_moderation_kb(work.id, page, total_pages),
+        ],
+        parse_mode=ParseMode.HTML,
+    )
+
+
+@admin.message_callback(F.callback.payload == 'admin_contest_manage')
+async def admin_contest_manage(event: MessageCallback, session: AsyncSession):
+    await event.message.delete()
+    contest_obj = await crq.get_active_contest(session)
+    if not contest_obj:
+        await event.message.answer('Конкурс не настроен.')
+        return
+    await event.message.answer(
+        text=f'<b>🏆 Управление конкурсом</b>\n\n{contest_obj.title or ""}',
+        attachments=[await kb.contest_admin_kb(contest_obj.voting_open)],
+        parse_mode=ParseMode.HTML,
+    )
+
+
+@admin.message_callback(F.callback.payload.startswith('admin_contest_pending'))
+async def admin_contest_pending(event: MessageCallback, session: AsyncSession):
+    await event.message.delete()
+    await _show_moderation_page(event, session, 'pending', 0)
+
+
+@admin.message_callback(F.callback.payload.startswith('admin_contest_approved'))
+async def admin_contest_approved(event: MessageCallback, session: AsyncSession):
+    await event.message.delete()
+    await _show_moderation_page(event, session, 'approved', 0)
+
+
+@admin.message_callback(F.callback.payload.startswith('admin_contest_rejected'))
+async def admin_contest_rejected(event: MessageCallback, session: AsyncSession):
+    await event.message.delete()
+    await _show_moderation_page(event, session, 'rejected', 0)
+
+
+@admin.message_callback(F.callback.payload.startswith('admin_contest_page_'))
+async def admin_contest_page(event: MessageCallback, session: AsyncSession):
+    await event.message.delete()
+    page = int(event.callback.payload.split('_')[-1])
+    await _show_moderation_page(event, session, 'pending', page)
+
+
+async def _show_moderation_page(event, session: AsyncSession, status: str, page: int):
+    contest_obj = await crq.get_active_contest(session)
+    if not contest_obj:
+        await event.message.answer('Конкурс не настроен.')
+        return
+
+    total = await crq.count_works(session, contest_obj.id, status)
+    if total == 0:
+        await event.message.answer(
+            f'Нет работ со статусом «{crq.STATUS_LABELS.get(status, status)}».',
+            attachments=[await kb.contest_admin_kb(contest_obj.voting_open)],
+        )
+        return
+
+    page_size = settings.CONTEST_PAGE_SIZE
+    total_pages = max(1, (total + page_size - 1) // page_size)
+    page = max(0, min(page, total_pages - 1))
+
+    works = await crq.get_works_by_status(
+        session, contest_obj.id, status, offset=page * page_size, limit=page_size
+    )
+
+    await event.message.answer(
+        text=f'<b>{crq.STATUS_LABELS.get(status, status)}</b> — стр. {page + 1}/{total_pages} (всего {total})',
+        parse_mode=ParseMode.HTML,
+    )
+    for work in works:
+        await asyncio.sleep(1)
+        await _send_work_card(event, work, page, total_pages)
+
+
+@admin.message_callback(F.callback.payload.startswith('admin_work_approve_'))
+async def admin_work_approve(event: MessageCallback, session: AsyncSession):
+    work_id = int(event.callback.payload.split('_')[-1])
+    await crq.update_work_status(session, work_id, 'approved')
+    await event.message.answer('✅ Работа допущена.')
+
+
+@admin.message_callback(F.callback.payload.startswith('admin_work_reject_'))
+async def admin_work_reject(event: MessageCallback, session: AsyncSession):
+    work_id = int(event.callback.payload.split('_')[-1])
+    await crq.update_work_status(session, work_id, 'rejected')
+    await event.message.answer('❌ Работа отклонена.')
+
+
+@admin.message_callback(F.callback.payload.startswith('admin_work_proof_'))
+async def admin_work_proof(event: MessageCallback, session: AsyncSession):
+    work_id = int(event.callback.payload.split('_')[-1])
+    work = await crq.update_work_status(session, work_id, 'need_proof')
+    if not work:
+        await event.message.answer('Работа не найдена.')
+        return
+    await event.message.answer('❓ Запрошено подтверждение авторства.')
+    try:
+        await event.bot.send_message(
+            chat_id=work.user_id,
+            text=(
+                'Нам нужно немного больше информации для проверки авторства.\n'
+                'Пожалуйста, пришлите фото работы с другого ракурса или короткое видео.'
+            ),
+        )
+    except Exception:
+        pass
+
+
+@admin.message_callback(F.callback.payload == 'admin_contest_vote_open')
+async def admin_contest_vote_open(event: MessageCallback, session: AsyncSession):
+    contest_obj = await crq.get_active_contest(session)
+    if not contest_obj:
+        return
+    await crq.set_voting_open(session, contest_obj.id, True)
+    await event.message.delete()
+    await event.message.answer('🗳 Голосование открыто.',
+                               attachments=[await kb.contest_admin_kb(True)])
+
+
+@admin.message_callback(F.callback.payload == 'admin_contest_vote_close')
+async def admin_contest_vote_close(event: MessageCallback, session: AsyncSession):
+    contest_obj = await crq.get_active_contest(session)
+    if not contest_obj:
+        return
+    await crq.set_voting_open(session, contest_obj.id, False)
+    await event.message.delete()
+    await event.message.answer('🔒 Голосование закрыто.',
+                               attachments=[await kb.contest_admin_kb(False)])
+
+
+@admin.message_callback(F.callback.payload == 'admin_contest_results')
+async def admin_contest_results(event: MessageCallback, session: AsyncSession):
+    await event.message.delete()
+    contest_obj = await crq.get_active_contest(session)
+    if not contest_obj:
+        return
+
+    results = await crq.get_results(session, contest_obj.id)
+    if not results['all']:
+        await event.message.answer('Пока нет результатов.',
+                                   attachments=[await kb.contest_results_kb()])
+        return
+
+    text = '<b>📊 Результаты конкурса</b>\n\n'
+    for category, label in crq.CATEGORY_LABELS.items():
+        text += f'<b>🏆 {label}</b>\n'
+        cat_rows = results['by_category'].get(category, [])
+        if not cat_rows:
+            text += '— нет работ\n\n'
+            continue
+        for work, votes in cat_rows[:3]:
+            text += f'№{work.number:03d} «{work.title}» — {votes} голосов\n'
+        text += '\n'
+
+    await event.message.answer(text=text, attachments=[await kb.contest_results_kb()],
+                               parse_mode=ParseMode.HTML)
+
+
+@admin.message_callback(F.callback.payload == 'admin_contest_export')
+async def admin_contest_export(event: MessageCallback, session: AsyncSession):
+    contest_obj = await crq.get_active_contest(session)
+    if not contest_obj:
+        return
+
+    results = await crq.get_results(session, contest_obj.id)
+    buffer = io.StringIO()
+    writer = csv.writer(buffer)
+    writer.writerow(['Номер', 'Название', 'Автор', 'Возраст', 'Категория', 'Статус', 'Голосов'])
+    for work, votes in results['all']:
+        writer.writerow([
+            work.number,
+            work.title,
+            work.author_name,
+            work.author_age,
+            crq.CATEGORY_LABELS.get(work.category, work.category),
+            crq.STATUS_LABELS.get(work.status, work.status),
+            votes,
+        ])
+
+    csv_bytes = buffer.getvalue().encode('utf-8-sig')
+    await event.message.answer(
+        text='📤 Выгрузка результатов:',
+        attachments=[
+            AttachmentUpload(
+                type=UploadType.FILE,
+                payload=AttachmentPayload(
+                    token=None,
+                    filename=f'contest_{contest_obj.id}_results.csv',
+                    data=csv_bytes,
+                ),
+            )
+        ],
+    )
