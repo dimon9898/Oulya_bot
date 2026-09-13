@@ -41,24 +41,36 @@ async def get_contest_by_id(db: AsyncSession, contest_id: int) -> Contest | None
     return result.first()
 
 
-def is_submission_open(contest: Contest) -> bool:
+def _as_aware(dt: datetime | None) -> datetime | None:
+    if dt is None:
+        return None
+    if dt.tzinfo is None:
+        return dt.replace(tzinfo=timezone.utc)
+    return dt
+
+
+def is_submission_open(contest: Contest | None) -> bool:
     if not contest or not contest.enabled:
         return False
     now = datetime.now(timezone.utc)
-    if contest.submission_start and now < contest.submission_start:
+    start = _as_aware(contest.submission_start)
+    end = _as_aware(contest.submission_end)
+    if start and now < start:
         return False
-    if contest.submission_end and now > contest.submission_end:
+    if end and now > end:
         return False
     return True
 
 
-def is_voting_open(contest: Contest) -> bool:
+def is_voting_open(contest: Contest | None) -> bool:
     if not contest or not contest.voting_open:
         return False
     now = datetime.now(timezone.utc)
-    if contest.voting_start and now < contest.voting_start:
+    start = _as_aware(contest.voting_start)
+    end = _as_aware(contest.voting_end)
+    if start and now < start:
         return False
-    if contest.voting_end and now > contest.voting_end:
+    if end and now > end:
         return False
     return True
 

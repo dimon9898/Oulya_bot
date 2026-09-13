@@ -204,6 +204,10 @@ async def contest_my_votes(event: MessageCallback, session: AsyncSession):
 async def contest_submit_start(event: MessageCallback, session: AsyncSession, context: MemoryContext):
     await event.message.delete()
     contest_obj = await crq.get_active_contest(session)
+    if not contest_obj:
+        await event.message.answer('Конкурс пока не настроен.',
+                                   attachments=[await kb.contest_back_kb()])
+        return
     if not crq.is_submission_open(contest_obj):
         await event.message.answer('Приём работ сейчас закрыт.',
                                    attachments=[await kb.contest_back_kb()])
