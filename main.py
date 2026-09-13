@@ -7,6 +7,7 @@ from app.bot_init import bot_set_commands
 from app.database.db_init import DbSessionMiddleware, async_session
 from app.routers.user import user
 from app.routers.admin import admin
+from app.routers.contest import contest
 
 from config import settings
 
@@ -17,7 +18,7 @@ logging.basicConfig(level=logging.INFO)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await bot_set_commands()
-    dp.include_routers(user, admin)
+    dp.include_routers(user, admin, contest)
     dp.middleware(DbSessionMiddleware(async_session))
     await dp._Dispatcher__ready(bot)
 

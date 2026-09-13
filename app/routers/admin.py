@@ -1,6 +1,10 @@
 import asyncio
+import csv
+import io
 from maxapi import Router, F
 from maxapi.types import MessageCreated, MessageCallback
+from maxapi.types.attachments.upload import AttachmentPayload, AttachmentUpload
+from maxapi.enums.upload_type import UploadType
 from maxapi.context import MemoryContext, State, StatesGroup
 from maxapi.filters.command import Command
 from maxapi.enums.parse_mode import ParseMode
@@ -9,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 import app.keyboards.admin_kb as kb
 import app.database.repository.admin_reqs as rq
+import app.database.repository.contest_reqs as crq
 
 from config import settings
 

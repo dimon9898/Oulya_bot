@@ -18,6 +18,8 @@ class Settings(BaseSettings):
     SECRET_MAX: str
     ADMIN_IDS: str
     REDIRECT_URL: str
+    CONTEST_MIN_VOTES: int = 3
+    CONTEST_PAGE_SIZE: int = 5
 
 
     @computed_field

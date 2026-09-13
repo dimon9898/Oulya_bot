@@ -24,6 +24,66 @@ class Contest(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     enabled: Mapped[bool] = mapped_column(default=False)
     description: Mapped[str] = mapped_column(String(512), nullable=True)
+    title: Mapped[str] = mapped_column(String(128), nullable=True)
+    rules: Mapped[str] = mapped_column(String(2048), nullable=True)
+    submission_start: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
+    submission_end: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
+    voting_start: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
+    voting_end: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
+    voting_open: Mapped[bool] = mapped_column(default=False)
+    results_published: Mapped[bool] = mapped_column(default=False)
+
+    works: Mapped[list['ContestWork']] = relationship(back_populates='contest')
+
+
+class ContestWork(Base):
+    __tablename__ = 'contest_works'
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    contest_id: Mapped[int] = mapped_column(ForeignKey('contests.id'))
+    number: Mapped[int] = mapped_column()
+    author_name: Mapped[str] = mapped_column(String(128))
+    author_age: Mapped[int] = mapped_column()
+    author_username: Mapped[str] = mapped_column(String(128), nullable=True)
+    user_id: Mapped[int] = mapped_column(BigInteger)
+    category: Mapped[str] = mapped_column(String(16))
+    title: Mapped[str] = mapped_column(String(256))
+    description: Mapped[str] = mapped_column(String(1024), nullable=True)
+    final_photo: Mapped[str] = mapped_column(String(512))
+    process_photo: Mapped[str] = mapped_column(String(512))
+    extra_photo: Mapped[str] = mapped_column(String(512), nullable=True)
+    status: Mapped[str] = mapped_column(String(32), default='pending')
+    moderation_comment: Mapped[str] = mapped_column(String(512), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.now)
+
+    contest: Mapped['Contest'] = relationship(back_populates='works')
+    votes: Mapped[list['ContestVote']] = relationship(back_populates='work')
+
+
+class ContestVoteSession(Base):
+    __tablename__ = 'contest_vote_sessions'
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    contest_id: Mapped[int] = mapped_column(ForeignKey('contests.id'))
+    user_id: Mapped[int] = mapped_column(BigInteger)
+    order_json: Mapped[str] = mapped_column(String(8192))
+    current_index: Mapped[int] = mapped_column(default=0)
+    selected_json: Mapped[str] = mapped_column(String(4096), default='[]')
+    is_finished: Mapped[bool] = mapped_column(default=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.now, onupdate=datetime.now)
+
+
+class ContestVote(Base):
+    __tablename__ = 'contest_votes'
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    contest_id: Mapped[int] = mapped_column(ForeignKey('contests.id'))
+    work_id: Mapped[int] = mapped_column(ForeignKey('contest_works.id'))
+    user_id: Mapped[int] = mapped_column(BigInteger)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.now)
+
+    work: Mapped['ContestWork'] = relationship(back_populates='votes')
     
 
 

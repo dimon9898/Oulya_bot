@@ -122,3 +122,76 @@ async def client_feedback_kb():
     kb.button(LinkButton(text='👉 Написать в личку', url=settings.ADMIN_IDS[0]))
     kb.button(CallbackButton(text='⬅ назад', payload='back_to_client_main'))
     return kb.adjust(1).as_markup()
+
+
+async def contest_main_kb(submission_open: bool, voting_open: bool, has_finished_vote: bool):
+    kb = InlineKeyboardBuilder()
+    if submission_open:
+        kb.add(CallbackButton(text='📝 Участвовать в конкурсе', payload='contest_submit'))
+    if voting_open and not has_finished_vote:
+        kb.add(CallbackButton(text='🗳 Голосовать', payload='contest_vote_start'))
+    if voting_open and has_finished_vote:
+        kb.add(CallbackButton(text='✅ Вы уже проголосовали', payload='contest_already_voted'))
+    kb.add(CallbackButton(text='🖼 Все работы', payload='contest_all_works'))
+    kb.add(CallbackButton(text='🔍 Найти работу по номеру', payload='contest_find_work'))
+    kb.add(CallbackButton(text='📋 Мои голоса', payload='contest_my_votes'))
+    kb.add(CallbackButton(text='📜 Правила конкурса', payload='contest_rules'))
+    kb.add(CallbackButton(text='⬅ назад', payload='back_to_user_main'))
+    return kb.adjust(1).as_markup()
+
+
+async def contest_categories_kb():
+    kb = InlineKeyboardBuilder()
+    kb.add(CallbackButton(text='Все работы', payload='contest_cat_all'))
+    kb.add(CallbackButton(text='До 10 лет', payload='contest_cat_child'))
+    kb.add(CallbackButton(text='11–17 лет', payload='contest_cat_teen'))
+    kb.add(CallbackButton(text='18+', payload='contest_cat_adult'))
+    kb.add(CallbackButton(text='⬅ назад', payload='client_contest'))
+    return kb.adjust(2, 2, 1).as_markup()
+
+
+async def contest_work_card_kb(work_id: int, is_selected: bool, is_last: bool):
+    kb = InlineKeyboardBuilder()
+    if is_selected:
+        kb.add(CallbackButton(text='☑ Выбрано', payload=f'contest_unselect_{work_id}'))
+    else:
+        kb.add(CallbackButton(text='❤️ Выбрать', payload=f'contest_select_{work_id}'))
+    if is_last:
+        kb.add(CallbackButton(text='🏁 Завершить', payload='contest_vote_finish'))
+    else:
+        kb.add(CallbackButton(text='➡️ Дальше', payload='contest_vote_next'))
+    kb.add(CallbackButton(text='⏸ Вернуться позже', payload='contest_vote_pause'))
+    return kb.adjust(2, 1).as_markup()
+
+
+async def contest_vote_confirm_kb():
+    kb = InlineKeyboardBuilder()
+    kb.add(CallbackButton(text='☑ Отправить', payload='contest_vote_submit'))
+    kb.add(CallbackButton(text='↩️ Продолжить просмотр', payload='contest_vote_resume'))
+    return kb.adjust(1).as_markup()
+
+
+async def contest_vote_pause_kb():
+    kb = InlineKeyboardBuilder()
+    kb.add(CallbackButton(text='▶️ Продолжить', payload='contest_vote_resume'))
+    kb.add(CallbackButton(text='⬅ назад', payload='client_contest'))
+    return kb.adjust(1).as_markup()
+
+
+async def contest_submit_cancel_kb():
+    kb = InlineKeyboardBuilder()
+    kb.add(CallbackButton(text='❌ Отменить', payload='contest_submit_cancel'))
+    return kb.adjust(1).as_markup()
+
+
+async def contest_submit_confirm_kb():
+    kb = InlineKeyboardBuilder()
+    kb.add(CallbackButton(text='✅ Подтверждаю', payload='contest_submit_confirm'))
+    kb.add(CallbackButton(text='❌ Отменить', payload='contest_submit_cancel'))
+    return kb.adjust(1).as_markup()
+
+
+async def contest_back_kb(payload: str = 'client_contest'):
+    kb = InlineKeyboardBuilder()
+    kb.add(CallbackButton(text='⬅ назад', payload=payload))
+    return kb.adjust(1).as_markup()
