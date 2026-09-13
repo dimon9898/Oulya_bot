@@ -119,7 +119,7 @@ async def cancel_buying_kb():
 
 async def client_feedback_kb():
     kb = InlineKeyboardBuilder()
-    kb.add(LinkButton(text='👉 Написать в личку', url=settings.ADMIN_IDS[0]))
+    kb.add(LinkButton(text='👉 Написать в личку', url=f'https://max.ru/u/{settings.ADMIN_IDS[0]}'))
     kb.add(CallbackButton(text='⬅ назад', payload='back_to_client_main'))
     return kb.adjust(1).as_markup()
 
