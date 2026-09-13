@@ -1,5 +1,6 @@
 import asyncio
 from maxapi import Router, F
+from logger_init import logger
 from maxapi.types import MessageCreated, MessageCallback
 from maxapi.types.attachments.upload import AttachmentPayload, AttachmentUpload
 from maxapi.types.attachments.image import AttachmentType, Image
@@ -202,7 +203,12 @@ async def contest_my_votes(event: MessageCallback, session: AsyncSession):
 
 @contest.message_callback(F.callback.payload == 'contest_submit')
 async def contest_submit_start(event: MessageCallback, session: AsyncSession, context: MemoryContext):
-    await event.message.delete()
+    logger.info(f'contest_submit нажат пользователем {event.from_user.user_id}')
+    try:
+        await event.message.delete()
+    except Exception as exc:
+        logger.warning(f'Не удалось удалить сообщение: {exc}')
+
     contest_obj = await crq.get_active_contest(session)
     if not contest_obj:
         await event.message.answer('Конкурс пока не настроен.',
