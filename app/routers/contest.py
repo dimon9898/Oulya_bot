@@ -52,6 +52,11 @@ async def _send_contest_main(event, session: AsyncSession):
     submission_open = crq.is_submission_open(contest_obj)
     voting_open = crq.is_voting_open(contest_obj)
     has_finished = await crq.has_finished_vote(session, contest_obj.id, event.from_user.user_id)
+    logger.info(
+        f'Конкурс: submission_open={submission_open}, voting_open={voting_open}, '
+        f'has_finished={has_finished}, enabled={contest_obj.enabled}, '
+        f'submission_start={contest_obj.submission_start}, submission_end={contest_obj.submission_end}'
+    )
 
     text = (
         f'<b>🏆 {contest_obj.title or "Конкурс месяца"}</b>\n\n'
@@ -66,6 +71,7 @@ async def _send_contest_main(event, session: AsyncSession):
 
 @contest.message_callback(F.callback.payload == 'client_contest')
 async def contest_main(event: MessageCallback, session: AsyncSession, context: MemoryContext):
+    logger.info(f'client_contest нажат пользователем {event.from_user.user_id}')
     await context.clear()
     await event.message.delete()
     await _send_contest_main(event, session)
