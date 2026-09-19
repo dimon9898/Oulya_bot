@@ -222,6 +222,20 @@ async def contest_submit_start(event: MessageCallback, session: AsyncSession, co
         await event.message.answer('Конкурс пока не настроен.',
                                    attachments=[await kb.contest_back_kb()])
         return
+
+    works = contest_obj.works    
+    for work in works:
+        if work.user_id == event.from_user.user_id:
+            if work.status == 'pending':
+                await event.message.answer('Ваша работа находится в модерации. Ожидайте...')
+                return
+            elif work.status == 'approved':
+                await event.message.answer('Вы стали участником конкурса!')
+                return
+            elif work.status == 'rejected':
+                await event.message.answer('Ваша предыдущая работа была отклонена модератором. Вы можете отправить новую.')
+                break
+            
     if not crq.is_submission_open(contest_obj):
         await event.message.answer('Приём работ сейчас закрыт.',
                                    attachments=[await kb.contest_back_kb()])

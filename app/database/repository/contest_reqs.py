@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 from sqlalchemy import select, func, update
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.database.models import Contest, ContestWork, ContestVote, ContestVoteSession
 from logger_init import logger
@@ -32,7 +33,9 @@ def detect_category(age: int) -> str:
 
 
 async def get_active_contest(db: AsyncSession) -> Contest | None:
-    result = await db.scalars(select(Contest).where(Contest.id == 1))
+    result = await db.scalars(select(Contest)
+                              .options(selectinload(Contest.works))
+                              .where(Contest.id == 1))
     return result.first()
 
 
