@@ -231,7 +231,7 @@ async def contest_submit_start(event: MessageCallback, session: AsyncSession, co
                                            attachments=[await kb.contest_back_kb()])
                 return
             elif work.status == 'approved':
-                await event.message.answer('Вы стали участником конкурса!',
+                await event.message.answer('🌞 Вы уже стали участником конкурса! Ваша работа принята, так что теперь можно выдохнуть и просто ждать результатов. Желаем удачи! 🍀',
                                            attachments=[await kb.contest_back_kb()])
                 return
             elif work.status == 'rejected':
