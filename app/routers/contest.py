@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 import app.database.repository.contest_reqs as crq
 import app.keyboards.user_kb as kb
+import app.keyboards.admin_kb as ad_kb
 from config import settings
 
 
@@ -372,6 +373,15 @@ async def submit_confirm(event: MessageCallback, session: AsyncSession, context:
         await event.message.answer('Не удалось сохранить работу. Попробуйте позже.')
         return
 
+    for admin_id in settings.ADMIN_IDS:
+        try:
+            await event.bot.send_message(chat_id=admin_id, text='Новая работа от пользователя 👇🏻',
+            attachments=[await ad_kb.admin_contest_pending_list()])
+        except Exception as e:
+            logger.error(f'Ошибка при отправке фото-работы админу [{admin_id}] от [{event.from_user.user_id}]: {e}')
+            await event.message.answer('Ошибка при отправке фото. Повторите позже!')
+            return
+
     await event.message.answer(
         text=(
             f'<b>Работа №{work.number:03d} принята на модерацию 💛</b>\n\n'
@@ -380,8 +390,7 @@ async def submit_confirm(event: MessageCallback, session: AsyncSession, context:
         attachments=[await kb.contest_back_kb()],
         parse_mode=ParseMode.HTML,
     )
-
-
+   
 # ---------- Голосование ----------
 
 async def _send_vote_card(event, session: AsyncSession, vote_session):

@@ -62,3 +62,10 @@ async def contest_results_kb():
     kb.add(CallbackButton(text='♻️ Обновить', payload='admin_contest_results'))
     kb.add(CallbackButton(text='⬅ назад', payload='admin_contest_manage'))
     return kb.adjust(1).as_markup()
+
+
+
+async def admin_contest_pending_list():
+    kb = InlineKeyboardBuilder()
+    kb.add(CallbackButton(text='📥 Заявки на модерации', payload='admin_contest_pending'))
+    return kb.adjust(1).as_markup()
