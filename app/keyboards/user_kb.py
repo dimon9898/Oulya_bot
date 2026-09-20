@@ -18,7 +18,7 @@ async def user_main_kb(enabled: bool):
     kb.add(CallbackButton(text='💎 Платные курсы', payload='client_paid_courses', intent=Intent.POSITIVE))
     kb.add(CallbackButton(text='📚 Мои курсы', payload='client_my_purchases', intent=Intent.POSITIVE))
     if enabled:
-        kb.add(CallbackButton(text='🏆 Конкурс месяца', payload='client_contest'))
+        kb.add(CallbackButton(text='🏆 Конкурс месяца(в тестовом режиме)', payload='client_contest'))
     kb.add(CallbackButton(text='🛍 Где купить материалы', payload='client_shop', intent=Intent.POSITIVE))
     kb.add(CallbackButton(text='📱 Соц сети', payload='client_social_site', intent=Intent.POSITIVE))
     kb.add(CallbackButton(text='✉️ Написать нам', payload='client_feedback', intent=Intent.POSITIVE))
