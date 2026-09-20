@@ -245,14 +245,14 @@ async def _show_moderation_page(event, session: AsyncSession, status: str, page:
 async def admin_work_approve(event: MessageCallback, session: AsyncSession):
     work_id = int(event.callback.payload.split('_')[-1])
     await crq.update_work_status(session, work_id, 'approved')
-    await event.message.answer('✅ Работа допущена.')
+    await event.message.edit(text='✅ Работа допущена.')
 
 
 @admin.message_callback(F.callback.payload.startswith('admin_work_reject_'))
 async def admin_work_reject(event: MessageCallback, session: AsyncSession):
     work_id = int(event.callback.payload.split('_')[-1])
     await crq.update_work_status(session, work_id, 'rejected')
-    await event.message.answer('❌ Работа отклонена.')
+    await event.message.edit(text='❌ Работа отклонена.')
 
 
 @admin.message_callback(F.callback.payload.startswith('admin_work_proof_'))
