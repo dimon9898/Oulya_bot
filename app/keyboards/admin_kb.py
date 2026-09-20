@@ -57,6 +57,13 @@ async def contest_moderation_kb(work_id: int, page: int, total_pages: int):
     return kb.adjust(1, 1, 1, len(nav) if nav else 1, 1).as_markup()
 
 
+async def back_to_admin_contest_manage():
+    kb = InlineKeyboardBuilder()
+    kb.add(CallbackButton(text='⬅ назад', payload='admin_contest_manage'))
+    return kb.adjust(1).as_markup()
+
+
+
 async def contest_results_kb():
     kb = InlineKeyboardBuilder()
     kb.add(CallbackButton(text='♻️ Обновить', payload='admin_contest_results'))

@@ -245,14 +245,14 @@ async def _show_moderation_page(event, session: AsyncSession, status: str, page:
 async def admin_work_approve(event: MessageCallback, session: AsyncSession):
     work_id = int(event.callback.payload.split('_')[-1])
     await crq.update_work_status(session, work_id, 'approved')
-    await event.message.edit(text='✅ Работа допущена.')
+    await event.message.edit(text='✅ Работа допущена.', attachments=[await kb.back_to_admin_contest_manage()])
 
 
 @admin.message_callback(F.callback.payload.startswith('admin_work_reject_'))
 async def admin_work_reject(event: MessageCallback, session: AsyncSession):
     work_id = int(event.callback.payload.split('_')[-1])
     await crq.update_work_status(session, work_id, 'rejected')
-    await event.message.edit(text='❌ Работа отклонена.')
+    await event.message.edit(text='❌ Работа отклонена.', attachments=[await kb.back_to_admin_contest_manage()])
 
 
 @admin.message_callback(F.callback.payload.startswith('admin_work_proof_'))
@@ -260,7 +260,7 @@ async def admin_work_proof(event: MessageCallback, session: AsyncSession):
     work_id = int(event.callback.payload.split('_')[-1])
     work = await crq.update_work_status(session, work_id, 'need_proof')
     if not work:
-        await event.message.answer('Работа не найдена.')
+        await event.message.answer('Работа не найдена.', attachments=[await kb.back_to_admin_contest_manage()])
         return
     await event.message.answer('❓ Запрошено подтверждение авторства.')
     try:
