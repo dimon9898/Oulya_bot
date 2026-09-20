@@ -375,7 +375,7 @@ async def submit_confirm(event: MessageCallback, session: AsyncSession, context:
 
     for admin_id in settings.ADMIN_IDS:
         try:
-            await event.bot.send_message(chat_id=admin_id, text='Новая работа от пользователя 👇🏻',
+            await event.bot.send_message(chat_id=event.chat.chat_id, user_id=admin_id, text='Новая работа от пользователя 👇🏻',
             attachments=[await ad_kb.admin_contest_pending_list()])
         except Exception as e:
             logger.error(f'Ошибка при отправке фото-работы админу [{admin_id}] от [{event.from_user.user_id}]: {e}')
