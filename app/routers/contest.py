@@ -554,13 +554,31 @@ async def contest_unselect(event: MessageCallback, session: AsyncSession):
     await _send_vote_card(event, session, vote_session)
 
 
-@contest.message_callback(F.callback.payload == 'contest_vote_next')
+@contest.message_callback(F.callback.payload == 'contest_vote_prev')
 async def contest_vote_next(event: MessageCallback, session: AsyncSession):
-    await event.message.delete()
     contest_obj = await crq.get_active_contest(session)
     vote_session = await crq.get_vote_session(session, contest_obj.id, event.from_user.user_id)
     if not vote_session:
         return
+    
+    if vote_session.current_index == 0:
+        await event.answer(notification='Вы уже на первой работе!', notify=True)
+        return
+
+    await event.message.delete()
+    new_index = max(vote_session.current_index - 1, 0)
+    await crq.update_vote_session(session, vote_session, current_index=new_index)
+    await _send_vote_card(event, session, vote_session)
+
+
+
+@contest.message_callback(F.callback.payload == 'contest_vote_next')
+async def contest_vote_next(event: MessageCallback, session: AsyncSession):
+    contest_obj = await crq.get_active_contest(session)
+    vote_session = await crq.get_vote_session(session, contest_obj.id, event.from_user.user_id)
+    if not vote_session:
+        return
+    await event.message.delete()
     order = crq.get_session_order(vote_session)
     new_index = min(vote_session.current_index + 1, len(order))
     await crq.update_vote_session(session, vote_session, current_index=new_index)
