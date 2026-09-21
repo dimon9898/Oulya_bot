@@ -150,18 +150,22 @@ async def contest_categories_kb():
     return kb.adjust(2, 2, 1).as_markup()
 
 
-async def contest_work_card_kb(work_id: int, is_selected: bool, is_last: bool):
+async def contest_work_card_kb(work_id: int, is_selected: bool, is_last: bool, index: int):
     kb = InlineKeyboardBuilder()
     if is_selected:
         kb.add(CallbackButton(text='☑ Выбрано', payload=f'contest_unselect_{work_id}'))
     else:
         kb.add(CallbackButton(text='❤️ Выбрать', payload=f'contest_select_{work_id}'))
+
+    if index > 0:
+        kb.add(CallbackButton(text='Пред ⬅️', payload='contest_vote_prev'))
+
     if is_last:
         kb.add(CallbackButton(text='🏁 Завершить', payload='contest_vote_finish'))
     else:
-        kb.add(CallbackButton(text='➡️ Дальше', payload='contest_vote_next'))
+        kb.add(CallbackButton(text='➡️ След', payload='contest_vote_next'))
     kb.add(CallbackButton(text='⏸ Вернуться позже', payload='contest_vote_pause'))
-    return kb.adjust(2, 1).as_markup()
+    return kb.adjust(1, 2, 1).as_markup()
 
 
 async def contest_vote_confirm_kb():

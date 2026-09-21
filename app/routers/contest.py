@@ -420,7 +420,7 @@ async def _send_vote_card(event, session: AsyncSession, vote_session):
                 type=UploadType.IMAGE,
                 payload=AttachmentPayload(token=work.final_photo),
             ),
-            await kb.contest_work_card_kb(work.id, is_selected, is_last),
+            await kb.contest_work_card_kb(work.id, is_selected, is_last, index),
         ],
         parse_mode=ParseMode.HTML,
     )
