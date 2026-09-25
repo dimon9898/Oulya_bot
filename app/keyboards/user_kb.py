@@ -3,6 +3,7 @@ from maxapi.types import CallbackButton, LinkButton
 from maxapi.enums.intent import Intent
 
 from config import settings
+from app.database.models import Contest
 import app.database.repository.requests as rq
 
 async def user_start_kb():
@@ -120,37 +121,47 @@ async def cancel_buying_kb():
 async def client_feedback_kb():
     kb = InlineKeyboardBuilder()
     kb.add(LinkButton(text='👉 Написать в личку', url=f'https://max.ru/u/{settings.ADMIN_IDS[0]}'))
-    kb.add(CallbackButton(text='⬅ назад', payload='back_to_client_main'))
-    return kb.adjust(1).as_markup()
-
-
-async def contest_main_kb(submission_open: bool, voting_open: bool, has_finished_vote: bool):
-    kb = InlineKeyboardBuilder()
-    if submission_open:
-        kb.add(CallbackButton(text='📝 Участвовать в конкурсе', payload='contest_submit'))
-    if voting_open and not has_finished_vote:
-        kb.add(CallbackButton(text='🗳 Голосовать', payload='contest_vote_start'))
-    if voting_open and has_finished_vote:
-        kb.add(CallbackButton(text='✅ Вы уже проголосовали', payload='contest_already_voted'))
-    kb.add(CallbackButton(text='🖼 Все работы', payload='contest_all_works'))
-    kb.add(CallbackButton(text='🔍 Найти работу по номеру', payload='contest_find_work'))
-    kb.add(CallbackButton(text='📋 Мои голоса', payload='contest_my_votes'))
-    kb.add(CallbackButton(text='📜 Правила конкурса', payload='contest_rules'))
     kb.add(CallbackButton(text='⬅ назад', payload='back_to_user_main'))
     return kb.adjust(1).as_markup()
 
 
-async def contest_categories_kb():
+async def contest_main_kb(submission_open: bool, voting_open: bool, has_finished_vote: bool, contest_id: int):
     kb = InlineKeyboardBuilder()
-    kb.add(CallbackButton(text='Все работы', payload='contest_cat_all'))
-    kb.add(CallbackButton(text='До 10 лет', payload='contest_cat_child'))
-    kb.add(CallbackButton(text='11–17 лет', payload='contest_cat_teen'))
-    kb.add(CallbackButton(text='18+', payload='contest_cat_adult'))
-    kb.add(CallbackButton(text='⬅ назад', payload='client_contest'))
+    if submission_open:
+        kb.add(CallbackButton(text='📝 Участвовать в конкурсе', payload=f'contest_submit_{contest_id}'))
+    if voting_open and not has_finished_vote:
+        kb.add(CallbackButton(text='🗳 Голосовать', payload=f'contest_vote_start_{contest_id}'))
+    if voting_open and has_finished_vote:
+        kb.add(CallbackButton(text='✅ Вы уже проголосовали', payload=f'contest_already_voted_{contest_id}'))
+    kb.add(CallbackButton(text='🖼 Все работы', payload=f'contest_all_works_{contest_id}'))
+    kb.add(CallbackButton(text='🔍 Найти работу по номеру', payload=f'contest_find_work_{contest_id}'))
+    kb.add(CallbackButton(text='📋 Мои голоса', payload=f'contest_my_votes_{contest_id}'))
+    kb.add(CallbackButton(text='📜 Правила конкурса', payload=f'contest_rules_{contest_id}'))
+    kb.add(CallbackButton(text='⬅ назад', payload='back_to_user_main'))
+    return kb.adjust(1).as_markup()
+
+
+async def contests_kb(contests: list[Contest]):
+    kb = InlineKeyboardBuilder()
+
+    for contest in contests:
+        kb.add(CallbackButton(text=f'{contest.title}', payload=f'contest_active_{contest.id}'))
+    kb.add(CallbackButton(text='⬅ назад', payload='back_to_user_main'))
+    return kb.adjust(1).as_markup()    
+
+
+
+async def contest_categories_kb(contest_id):
+    kb = InlineKeyboardBuilder()
+    kb.add(CallbackButton(text='Все работы', payload=f'contest_cat_all_{contest_id}'))
+    kb.add(CallbackButton(text='До 10 лет', payload=f'contest_cat_child_{contest_id}'))
+    kb.add(CallbackButton(text='11–17 лет', payload=f'contest_cat_teen_{contest_id}'))
+    kb.add(CallbackButton(text='18+', payload=f'contest_cat_adult_{contest_id}'))
+    kb.add(CallbackButton(text='⬅ назад', payload=f'contest_active__{contest_id}'))
     return kb.adjust(2, 2, 1).as_markup()
 
 
-async def contest_work_card_kb(work_id: int, is_selected: bool, is_last: bool):
+async def contest_work_card_kb(work_id: int, is_selected: bool, is_last: bool, contest_id: int):
     kb = InlineKeyboardBuilder()
     if is_selected:
         kb.add(CallbackButton(text='☑ Выбрано', payload=f'contest_unselect_{work_id}'))
@@ -158,27 +169,28 @@ async def contest_work_card_kb(work_id: int, is_selected: bool, is_last: bool):
         kb.add(CallbackButton(text='❤️ Выбрать', payload=f'contest_select_{work_id}'))
 
 
-    kb.add(CallbackButton(text='Пред ⬅️', payload='contest_vote_prev'))
+    kb.add(CallbackButton(text='Пред ', payload=f'contest_vote_prev_{contest_id}'))
 
     if is_last:
-        kb.add(CallbackButton(text='🏁 Завершить', payload='contest_vote_finish'))
+        kb.add(CallbackButton(text='🏁 Завершить', payload=f'contest_vote_finish_{contest_id}'))
     else:
-        kb.add(CallbackButton(text='➡️ След', payload='contest_vote_next'))
-    kb.add(CallbackButton(text='⏸ Вернуться позже', payload='contest_vote_pause'))
-    return kb.adjust(1, 2, 1).as_markup()
+        kb.add(CallbackButton(text='➡️ След', payload=f'contest_vote_next_{contest_id}'))
+    kb.add(CallbackButton(text='⏸ Вернуться позже', payload=f'contest_vote_pause_{contest_id}'))
+    kb.add(CallbackButton(text='⬅️ Меню', payload='back_to_user_main'))
+    return kb.adjust(1, 2, 1, 1).as_markup()
 
 
-async def contest_vote_confirm_kb():
+async def contest_vote_confirm_kb(contest_id):
     kb = InlineKeyboardBuilder()
-    kb.add(CallbackButton(text='☑ Отправить', payload='contest_vote_submit'))
-    kb.add(CallbackButton(text='↩️ Продолжить просмотр', payload='contest_vote_resume'))
+    kb.add(CallbackButton(text='☑ Отправить', payload=f'contest_vote_submit_{contest_id}'))
+    kb.add(CallbackButton(text='↩️ Продолжить просмотр', payload=f'contest_vote_resume_{contest_id}'))
     return kb.adjust(1).as_markup()
 
 
-async def contest_vote_pause_kb():
+async def contest_vote_pause_kb(contest_id):
     kb = InlineKeyboardBuilder()
-    kb.add(CallbackButton(text='▶️ Продолжить', payload='contest_vote_resume'))
-    kb.add(CallbackButton(text='⬅ назад', payload='client_contest'))
+    kb.add(CallbackButton(text='▶️ Продолжить', payload=f'contest_vote_resume_{contest_id}'))
+    kb.add(CallbackButton(text='⬅ назад', payload=f'contest_active_{contest_id}'))
     return kb.adjust(1).as_markup()
 
 

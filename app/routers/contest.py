@@ -19,6 +19,7 @@ contest = Router()
 
 
 class SubmitState(StatesGroup):
+    contest_id = State()
     author_name = State()
     author_age = State()
     author_username = State()
@@ -44,8 +45,15 @@ def _work_caption(work, index: int, total: int) -> str:
     )
 
 
-async def _send_contest_main(event, session: AsyncSession):
-    contest_obj = await crq.get_active_contest(session)
+async def _send_active_contest(event, session: AsyncSession):
+    contests = await crq.get_all_active_contests(session)
+    await event.message.delete()
+    await event.message.answer('Выберите актуальный конкурс 👇🏻', attachments=[await kb.contests_kb(contests)])
+
+
+
+async def _send_contest_main(event, session: AsyncSession, contest_id: int, context: MemoryContext):
+    contest_obj = await crq.get_active_contest(session, contest_id)
     if not contest_obj:
         await event.message.answer('Конкурс пока не настроен.')
         return
@@ -65,45 +73,59 @@ async def _send_contest_main(event, session: AsyncSession):
     )
     await event.message.answer(
         text=text,
-        attachments=[await kb.contest_main_kb(submission_open, voting_open, has_finished)],
+        attachments=[await kb.contest_main_kb(submission_open, voting_open, has_finished, contest_id)],
         parse_mode=ParseMode.HTML,
     )
 
+    await context.set_state(SubmitState.contest_id)
 
 @contest.message_callback(F.callback.payload == 'client_contest')
+async def get_active_contest(event: MessageCallback, session: AsyncSession, context: MemoryContext):
+    await _send_active_contest(event, session)
+
+
+
+
+
+@contest.message_callback(F.callback.payload.startswith('contest_active_'))
 async def contest_main(event: MessageCallback, session: AsyncSession, context: MemoryContext):
     logger.info(f'client_contest нажат пользователем {event.from_user.user_id}')
+    contest_id = int(event.callback.payload.split('_')[2])
     await context.clear()
     await event.message.delete()
-    await _send_contest_main(event, session)
+    await _send_contest_main(event, session, contest_id)
 
 
-@contest.message_callback(F.callback.payload == 'contest_rules')
+@contest.message_callback(F.callback.payload.startswith('contest_rules_'))
 async def contest_rules(event: MessageCallback, session: AsyncSession):
     await event.message.delete()
-    contest_obj = await crq.get_active_contest(session)
+    contest_id = int(event.callback.payload.split('_')[2])
+    contest_obj = await crq.get_active_contest(session, contest_id)
     rules = (contest_obj.rules if contest_obj and contest_obj.rules else 'Правила конкурса пока не заданы.')
     await event.message.answer(text=rules, attachments=[await kb.contest_back_kb()])
 
 
-@contest.message_callback(F.callback.payload == 'contest_all_works')
+@contest.message_callback(F.callback.payload.startswith('contest_all_works_'))
 async def contest_all_works(event: MessageCallback, session: AsyncSession):
     await event.message.delete()
+    contest_id = int(event.callback.payload.split('_')[3])
     await event.message.answer(
         text='Выберите категорию:',
-        attachments=[await kb.contest_categories_kb()],
+        attachments=[await kb.contest_categories_kb(contest_id)],
     )
 
 
 @contest.message_callback(F.callback.payload.startswith('contest_cat_'))
 async def contest_show_category(event: MessageCallback, session: AsyncSession):
     await event.message.delete()
-    contest_obj = await crq.get_active_contest(session)
+    category = event.callback.payload.split('_')[2]
+    contest_id = int(event.callback.payload.split('_')[3])
+    contest_obj = await crq.get_active_contest(session, contest_id)
     if not contest_obj:
         await event.message.answer('Конкурс не найден.')
         return
 
-    category = event.callback.payload.replace('contest_cat_', '')
+
     if category == 'all':
         works = await crq.get_approved_works(session, contest_obj.id)
     else:
@@ -137,22 +159,26 @@ async def contest_show_category(event: MessageCallback, session: AsyncSession):
                                attachments=[await kb.contest_back_kb()])
 
 
-@contest.message_callback(F.callback.payload == 'contest_find_work')
+@contest.message_callback(F.callback.payload.startswith('contest_find_work_'))
 async def contest_find_work(event: MessageCallback, context: MemoryContext):
     await event.message.delete()
+    contest_id = int(event.callback.payload.split('_')[3])
     await event.message.answer('Введите номер работы (например, 37):',
                                attachments=[await kb.contest_submit_cancel_kb()])
+    await context.update_data(contest_id=contest_id)
     await context.set_state(FindState.number)
 
 
 @contest.message_created(FindState.number, F.message.body.text)
 async def contest_find_work_result(event: MessageCreated, session: AsyncSession, context: MemoryContext):
+    data = await context.get_data()
+    contest_id = int(data.get('contest_id', ''))
     raw = event.message.body.text.strip()
     if not raw.isdigit():
         await event.message.answer('Пожалуйста, введите число.')
         return
 
-    contest_obj = await crq.get_active_contest(session)
+    contest_obj = await crq.get_active_contest(session, contest_id)
     if not contest_obj:
         await context.clear()
         await event.message.answer('Конкурс не найден.')
@@ -188,7 +214,8 @@ async def contest_find_work_result(event: MessageCreated, session: AsyncSession,
 @contest.message_callback(F.callback.payload == 'contest_my_votes')
 async def contest_my_votes(event: MessageCallback, session: AsyncSession):
     await event.message.delete()
-    contest_obj = await crq.get_active_contest(session)
+    contest_id = int(event.callback.payload.split('_')[3])
+    contest_obj = await crq.get_active_contest(session, contest_id)
     if not contest_obj:
         await event.message.answer('Конкурс не найден.')
         return
@@ -209,16 +236,18 @@ async def contest_my_votes(event: MessageCallback, session: AsyncSession):
 
 # ---------- Подача заявки ----------
 
-@contest.message_callback(F.callback.payload == 'contest_submit')
+@contest.message_callback(SubmitState.contest_id, F.callback.payload.startswith('contest_submit_'))
 async def contest_submit_start(event: MessageCallback, session: AsyncSession, context: MemoryContext):
     logger.info(f'contest_submit нажат пользователем {event.from_user.user_id}')
+    contest_id = int(event.callback.payload.split('_')[3])
+    await context.update_data(contest_id=contest_id)
     try:
         await event.message.delete()
     except Exception as exc:
         logger.warning(f'Не удалось удалить сообщение: {exc}')
 
     await context.clear()
-    contest_obj = await crq.get_active_contest(session)
+    contest_obj = await crq.get_active_contest(session, contest_id)
     if not contest_obj:
         await event.message.answer('Конкурс пока не настроен.',
                                    attachments=[await kb.contest_back_kb()])
@@ -349,7 +378,8 @@ async def submit_process_photo(event: MessageCreated, context: MemoryContext):
 @contest.message_callback(SubmitState.confirm, F.callback.payload == 'contest_submit_confirm')
 async def submit_confirm(event: MessageCallback, session: AsyncSession, context: MemoryContext):
     data = await context.get_data()
-    contest_obj = await crq.get_active_contest(session)
+    contest_id = int(data.get('contest_id', ''))
+    contest_obj = await crq.get_active_contest(session, contest_id)
     if not contest_obj:
         await context.clear()
         await event.message.answer('Конкурс не найден.')
@@ -420,7 +450,7 @@ async def _send_vote_card(event, session: AsyncSession, vote_session):
                 type=UploadType.IMAGE,
                 payload=AttachmentPayload(token=work.final_photo),
             ),
-            await kb.contest_work_card_kb(work.id, is_selected, is_last),
+            await kb.contest_work_card_kb(work.id, is_selected, is_last, work.contest.id),
         ],
         parse_mode=ParseMode.HTML,
     )
@@ -456,10 +486,11 @@ async def _send_vote_summary(event, session: AsyncSession, vote_session):
     )
 
 
-@contest.message_callback(F.callback.payload == 'contest_vote_start')
+@contest.message_callback(F.callback.payload.startswith('contest_vote_start_'))
 async def contest_vote_start(event: MessageCallback, session: AsyncSession):
     await event.message.delete()
-    contest_obj = await crq.get_active_contest(session)
+    contest_id = int(event.callback.payload.split('_')[3])
+    contest_obj = await crq.get_active_contest(session, contest_id)
     if not crq.is_voting_open(contest_obj):
         await event.message.answer('Голосование сейчас закрыто.',
                                    attachments=[await kb.contest_back_kb()])
@@ -492,10 +523,11 @@ async def contest_vote_start(event: MessageCallback, session: AsyncSession):
     await _send_vote_card(event, session, vote_session)
 
 
-@contest.message_callback(F.callback.payload == 'contest_vote_resume')
+@contest.message_callback(F.callback.payload.startswith('contest_vote_resume_'))
 async def contest_vote_resume(event: MessageCallback, session: AsyncSession):
     await event.message.delete()
-    contest_obj = await crq.get_active_contest(session)
+    contest_id = int(event.callback.payload.split('_')[3])
+    contest_obj = await crq.get_active_contest(session, contest_id)
     if not contest_obj:
         return
     vote_session = await crq.get_vote_session(session, contest_obj.id, event.from_user.user_id)
@@ -506,10 +538,11 @@ async def contest_vote_resume(event: MessageCallback, session: AsyncSession):
     await _send_vote_card(event, session, vote_session)
 
 
-@contest.message_callback(F.callback.payload == 'contest_vote_pause')
+@contest.message_callback(F.callback.payload == 'contest_vote_pause_')
 async def contest_vote_pause(event: MessageCallback, session: AsyncSession):
     await event.message.delete()
-    contest_obj = await crq.get_active_contest(session)
+    contest_id = int(event.callback.payload.split('_')[3])
+    contest_obj = await crq.get_active_contest(session, contest_id)
     if not contest_obj:
         return
     vote_session = await crq.get_vote_session(session, contest_obj.id, event.from_user.user_id)
@@ -526,7 +559,8 @@ async def contest_vote_pause(event: MessageCallback, session: AsyncSession):
 async def contest_select(event: MessageCallback, session: AsyncSession):
     await event.message.delete()
     work_id = int(event.callback.payload.split('_')[-1])
-    contest_obj = await crq.get_active_contest(session)
+    work = await crq.get_work_by_id(session, work_id)
+    contest_obj = await crq.get_active_contest(session, work.contest.id)
     vote_session = await crq.get_vote_session(session, contest_obj.id, event.from_user.user_id)
     if not vote_session:
         return
@@ -542,7 +576,8 @@ async def contest_select(event: MessageCallback, session: AsyncSession):
 async def contest_unselect(event: MessageCallback, session: AsyncSession):
     await event.message.delete()
     work_id = int(event.callback.payload.split('_')[-1])
-    contest_obj = await crq.get_active_contest(session)
+    work = await crq.get_work_by_id(session, work_id)
+    contest_obj = await crq.get_active_contest(session, work.contest.id)
     vote_session = await crq.get_vote_session(session, contest_obj.id, event.from_user.user_id)
     if not vote_session:
         return
@@ -554,9 +589,10 @@ async def contest_unselect(event: MessageCallback, session: AsyncSession):
     await _send_vote_card(event, session, vote_session)
 
 
-@contest.message_callback(F.callback.payload == 'contest_vote_prev')
+@contest.message_callback(F.callback.payload.startswith('contest_vote_prev_'))
 async def contest_vote_next(event: MessageCallback, session: AsyncSession):
-    contest_obj = await crq.get_active_contest(session)
+    contest_id = int(event.callback.payload.split('_')[3])
+    contest_obj = await crq.get_active_contest(session, contest_id)
     vote_session = await crq.get_vote_session(session, contest_obj.id, event.from_user.user_id)
     if not vote_session:
         return
@@ -572,9 +608,10 @@ async def contest_vote_next(event: MessageCallback, session: AsyncSession):
 
 
 
-@contest.message_callback(F.callback.payload == 'contest_vote_next')
+@contest.message_callback(F.callback.payload.startswith('contest_vote_next_'))
 async def contest_vote_next(event: MessageCallback, session: AsyncSession):
-    contest_obj = await crq.get_active_contest(session)
+    contest_id = int(event.callback.payload.split('_')[3])
+    contest_obj = await crq.get_active_contest(session, contest_id)
     vote_session = await crq.get_vote_session(session, contest_obj.id, event.from_user.user_id)
     if not vote_session:
         return
@@ -585,20 +622,22 @@ async def contest_vote_next(event: MessageCallback, session: AsyncSession):
     await _send_vote_card(event, session, vote_session)
 
 
-@contest.message_callback(F.callback.payload == 'contest_vote_finish')
+@contest.message_callback(F.callback.payload.startswith('contest_vote_finish_'))
 async def contest_vote_finish(event: MessageCallback, session: AsyncSession):
     await event.message.delete()
-    contest_obj = await crq.get_active_contest(session)
+    contest_id = int(event.callback.payload.split('_')[3])
+    contest_obj = await crq.get_active_contest(session, contest_id)
     vote_session = await crq.get_vote_session(session, contest_obj.id, event.from_user.user_id)
     if not vote_session:
         return
     await _send_vote_summary(event, session, vote_session)
 
 
-@contest.message_callback(F.callback.payload == 'contest_vote_submit')
+@contest.message_callback(F.callback.payload.startswith('contest_vote_submit_'))
 async def contest_vote_submit(event: MessageCallback, session: AsyncSession):
     await event.message.delete()
-    contest_obj = await crq.get_active_contest(session)
+    contest_id = int(event.callback.payload.split('_')[3])
+    contest_obj = await crq.get_active_contest(session, contest_id)
     vote_session = await crq.get_vote_session(session, contest_obj.id, event.from_user.user_id)
     if not vote_session or vote_session.is_finished:
         await event.message.answer('Голосование уже завершено.',

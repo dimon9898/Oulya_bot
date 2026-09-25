@@ -32,10 +32,20 @@ def detect_category(age: int) -> str:
     return 'adult'
 
 
-async def get_active_contest(db: AsyncSession) -> Contest | None:
+
+async def get_all_active_contests(db: AsyncSession):
+    result = await db.execute(select(Contest)
+                              .options(selectinload(Contest.works))
+                              .where(Contest.enabled == True))
+    return result.scalars().all()
+
+
+
+
+async def get_active_contest(db: AsyncSession, contest_id: int) -> Contest | None:
     result = await db.scalars(select(Contest)
                               .options(selectinload(Contest.works))
-                              .where(Contest.id == 1))
+                              .where(Contest.id == contest_id))
     return result.first()
 
 
@@ -148,7 +158,9 @@ async def count_works(db: AsyncSession, contest_id: int, status: str | None = No
 
 
 async def get_work_by_id(db: AsyncSession, work_id: int) -> ContestWork | None:
-    result = await db.scalars(select(ContestWork).where(ContestWork.id == work_id))
+    result = await db.scalars(select(ContestWork)
+                              .options(selectinload(ContestWork.contest))
+                              .where(ContestWork.id == work_id))
     return result.first()
 
 
