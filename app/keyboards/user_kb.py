@@ -145,7 +145,7 @@ async def contests_kb(contests: list[Contest]):
     kb = InlineKeyboardBuilder()
 
     for contest in contests:
-        kb.add(CallbackButton(text=f'{contest.title}', payload=f'contest_active_{contest.id}'))
+        kb.add(CallbackButton(text=f'{contest.description}', payload=f'contest_active_{contest.id}'))
     kb.add(CallbackButton(text='⬅ назад', payload='back_to_user_main'))
     return kb.adjust(1).as_markup()    
 

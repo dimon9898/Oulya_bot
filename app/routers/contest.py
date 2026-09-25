@@ -93,7 +93,7 @@ async def contest_main(event: MessageCallback, session: AsyncSession, context: M
     contest_id = int(event.callback.payload.split('_')[2])
     await context.clear()
     await event.message.delete()
-    await _send_contest_main(event, session, contest_id)
+    await _send_contest_main(event, session, contest_id, context)
 
 
 @contest.message_callback(F.callback.payload.startswith('contest_rules_'))
