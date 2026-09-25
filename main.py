@@ -17,7 +17,7 @@ logging.basicConfig(level=logging.INFO)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    await bot_set_commands()
+    '''await bot_set_commands()'''
     dp.include_routers(contest, user, admin)
     dp.middleware(DbSessionMiddleware(async_session))
     await dp._Dispatcher__ready(bot)
