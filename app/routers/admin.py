@@ -19,6 +19,7 @@ from config import settings
 
 
 class Form(StatesGroup):
+    title = State()
     description = State()
 
 
@@ -59,30 +60,79 @@ async def admin_contest(event: MessageCallback, session: AsyncSession):
 
 
 @admin.message_callback(F.callback.payload.startswith('contest_'))
-async def contest_state(event: MessageCallback, session: AsyncSession, context: MemoryContext):
+async def contest_state(event: MessageCallback, session: AsyncSession):
     action = event.callback.payload.split('_')[1]
+    contest_id = int(event.callback.payload.split('_')[2])
     await event.message.delete()
 
     if action == 'off':
-        contest = await rq.update_contest_state(session, action)
+        contest = await rq.update_contest_state(session, action, contest_id)
         if contest.enabled == False:
-            await event.message.answer('Кнопка "Конкурс месяца" отключена ❌',
+            await event.message.answer(f'Конкурс "{contest.description}" отключен ❌',
                                        attachments=[await kb.contest_kb(contest.enabled)])
     elif action == 'on':
-        await event.message.answer('Введите описание конкурса...')
-        await context.set_state(Form.description)
+        contest = await rq.update_contest_state(session, action, contest_id)
+        await event.message.answer(f'Конкурс "{contest.description}" включен ✅', 
+                                   attachments=[await kb.contest_kb(contest.enabled)])
+
+
+
+@admin.message_callback(F.callback.payload.startswith('admin_contest_edit_title_'))
+async def update_contest_title(event: MessageCallback, session: AsyncSession, context: MemoryContext):
+    await event.message.delete()
+    contest_id = int(event.callback.payload.split('_')[4])
+    await event.message.answer('Введите название конкурса: ')
+    await context.update_data(contest_id=contest_id)
+    await context.set_state(Form.title)
+
+
+
+
+@admin.message_created(Form.title, F.message.body.text)
+async def update_contest_description(event: MessageCreated, session: AsyncSession, context: MemoryContext):
+    await context.update_data(title=event.message.body.text)
+    data = await context.get_data()
+    contest_id = int(data.get('contest_id', ''))
+    title = data.get('title', '')
+    result = await rq.update_contest_title(session, contest_id, title)
+    if result.is_updated:
+        await event.message.answer('Название конкурса обновлено! ✅')
+        await asyncio.sleep(1)
+        await event.message.answer('Панель конкурса', 
+                                   attachments=[ 
+                                       await kb.contest_admin_kb(result.contest.voting_open, result.contest.enabled)
+                                    ])
+    else:
+        await event.message.answer('Ошибка при обновление название конкурса!')
+
+    await context.clear()        
+
+
+
+@admin.message_callback(F.callback.payload.startswith('admin_contest_edit_description_'))
+async def update_contest_title(event: MessageCallback, session: AsyncSession, context: MemoryContext):
+    await event.message.delete()
+    contest_id = int(event.callback.payload.split('_')[4])
+    await event.message.answer('Введите описание конкурса: ')
+    await context.update_data(contest_id=contest_id)
+    await context.set_state(Form.description)
+
+
 
 
 @admin.message_created(Form.description, F.message.body.text)
 async def update_contest_description(event: MessageCreated, session: AsyncSession, context: MemoryContext):
     await context.update_data(description=event.message.body.text)
     data = await context.get_data()
+    contest_id = int(data.get('contest_id', ''))
     description = data.get('description', '')
-    success = await rq.update_contest_state(session, description)
-    if success:
+    result = await rq.update_contest_description(session, contest_id, description)
+    if result.is_updated:
         await event.message.answer('Описание конкурса обновлено! ✅')
         await asyncio.sleep(1)
-        await event.message.answer('Админ-панель', attachments=[await kb.admin_panel_kb()])
+        await event.message.answer('Панель конкурса', attachments=[
+            await kb.contest_admin_kb(result.contest.voting_open, result.contest.enabled)
+        ])
     else:
         await event.message.answer('Ошибка при обновление описание конкурса!')
 
@@ -174,44 +224,56 @@ async def _send_work_card(event, work, page: int, total_pages: int):
 @admin.message_callback(F.callback.payload == 'admin_contest_manage')
 async def admin_contest_manage(event: MessageCallback, session: AsyncSession):
     await event.message.delete()
-    contest_obj = await crq.get_active_contest(session)
+    contests = await crq.get_all_active_contests(session)
+    await event.message.answer('Выберите активный конкурс:', attachments=[await kb.admin_contests_kb(contests)])
+
+
+@admin.message_callback(F.callback.payload.startswith('admin_select_contest_'))
+async def admin_select_contest(event: MessageCallback, session: AsyncSession):
+    await event.message.delete()
+    contest_id = int(event.callback.payload('_')[3])
+    contest_obj = await crq.get_active_contest(session, contest_id)
     if not contest_obj:
         await event.message.answer('Конкурс не настроен.')
         return
     await event.message.answer(
         text=f'<b>🏆 Управление конкурсом</b>\n\n{contest_obj.title or ""}',
-        attachments=[await kb.contest_admin_kb(contest_obj.voting_open)],
+        attachments=[await kb.contest_admin_kb(contest_obj.voting_open, contest_obj.id, contest_obj.enabled)],
         parse_mode=ParseMode.HTML,
     )
 
 
-@admin.message_callback(F.callback.payload.startswith('admin_contest_pending'))
+@admin.message_callback(F.callback.payload.startswith('admin_contest_pending_'))
 async def admin_contest_pending(event: MessageCallback, session: AsyncSession):
     await event.message.delete()
-    await _show_moderation_page(event, session, 'pending', 0)
+    contes_id = int(event.callback.payload.split('_')[3])
+    await _show_moderation_page(event, session, 'pending', 0, contes_id)
 
 
-@admin.message_callback(F.callback.payload.startswith('admin_contest_approved'))
+@admin.message_callback(F.callback.payload.startswith('admin_contest_approved_'))
 async def admin_contest_approved(event: MessageCallback, session: AsyncSession):
     await event.message.delete()
-    await _show_moderation_page(event, session, 'approved', 0)
+    contes_id = int(event.callback.payload.split('_')[3])
+    await _show_moderation_page(event, session, 'approved', 0, contes_id)
 
 
-@admin.message_callback(F.callback.payload.startswith('admin_contest_rejected'))
+@admin.message_callback(F.callback.payload.startswith('admin_contest_rejected_'))
 async def admin_contest_rejected(event: MessageCallback, session: AsyncSession):
     await event.message.delete()
-    await _show_moderation_page(event, session, 'rejected', 0)
+    contes_id = int(event.callback.payload.split('_')[3])
+    await _show_moderation_page(event, session, 'rejected', 0, contes_id)
 
 
 @admin.message_callback(F.callback.payload.startswith('admin_contest_page_'))
 async def admin_contest_page(event: MessageCallback, session: AsyncSession):
     await event.message.delete()
+    contes_id = int(event.callback.payload.split('_')[3])
     page = int(event.callback.payload.split('_')[-1])
-    await _show_moderation_page(event, session, 'pending', page)
+    await _show_moderation_page(event, session, 'pending', page, contes_id)
 
 
-async def _show_moderation_page(event, session: AsyncSession, status: str, page: int):
-    contest_obj = await crq.get_active_contest(session)
+async def _show_moderation_page(event, session: AsyncSession, status: str, page: int, contest_id: int):
+    contest_obj = await crq.get_active_contest(session, contest_id)
     if not contest_obj:
         await event.message.answer('Конкурс не настроен.')
         return
@@ -220,7 +282,7 @@ async def _show_moderation_page(event, session: AsyncSession, status: str, page:
     if total == 0:
         await event.message.answer(
             f'Нет работ со статусом «{crq.STATUS_LABELS.get(status, status)}».',
-            attachments=[await kb.contest_admin_kb(contest_obj.voting_open)],
+            attachments=[await kb.contest_admin_kb(contest_obj.voting_open, contest_obj.id, contest_obj.enabled)],
         )
         return
 
@@ -275,26 +337,28 @@ async def admin_work_proof(event: MessageCallback, session: AsyncSession):
         pass
 
 
-@admin.message_callback(F.callback.payload == 'admin_contest_vote_open')
+@admin.message_callback(F.callback.payload.startswith('admin_contest_vote_open_'))
 async def admin_contest_vote_open(event: MessageCallback, session: AsyncSession):
-    contest_obj = await crq.get_active_contest(session)
+    contest_id = int(event.callback.payload.split('_')[4])
+    contest_obj = await crq.get_active_contest(session, contest_id)
     if not contest_obj:
         return
     await crq.set_voting_open(session, contest_obj.id, True)
     await event.message.delete()
     await event.message.answer('🗳 Голосование открыто.',
-                               attachments=[await kb.contest_admin_kb(True)])
+                               attachments=[await kb.contest_admin_kb(True, contest_obj.id, contest_obj.enabled)])
 
 
-@admin.message_callback(F.callback.payload == 'admin_contest_vote_close')
+@admin.message_callback(F.callback.payload.startswith('admin_contest_vote_close_'))
 async def admin_contest_vote_close(event: MessageCallback, session: AsyncSession):
-    contest_obj = await crq.get_active_contest(session)
+    contest_id = int(event.callback.payload.split('_')[4])
+    contest_obj = await crq.get_active_contest(session, contest_id)
     if not contest_obj:
         return
     await crq.set_voting_open(session, contest_obj.id, False)
     await event.message.delete()
     await event.message.answer('🔒 Голосование закрыто.',
-                               attachments=[await kb.contest_admin_kb(False)])
+                               attachments=[await kb.contest_admin_kb(False, contest_obj.id, contest_obj.enabled)])
 
 
 @admin.message_callback(F.callback.payload == 'admin_contest_results')
@@ -360,3 +424,10 @@ async def admin_contest_export(event: MessageCallback, session: AsyncSession):
             )
         ],
     )
+
+
+
+@admin.message_callback(F.callback.payload.startswith('contest_off_'))
+async def contest_off_handler(event: MessageCallback, session: AsyncSession):
+    await event.message.delete()
+    contest_id = int(event.callback.payload.split('_')[2])

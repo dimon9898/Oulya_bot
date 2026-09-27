@@ -2,8 +2,17 @@ from datetime import datetime, timedelta
 from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import func, select
+from dataclasses import dataclass
 
 from app.database.models import Contest, User, Purchase
+
+
+@dataclass
+class UpdateContest:
+    contest: Contest | None
+    is_updated: bool
+
+
 
 
 async def get_contest_status(db: AsyncSession):
@@ -16,8 +25,8 @@ async def get_contest_status(db: AsyncSession):
     return contest
 
 
-async def update_contest_state(db: AsyncSession, action: str) -> bool:
-    result = await db.scalars(select(Contest).where(Contest.id == 1))
+async def update_contest_state(db: AsyncSession, action: str, contest_id: int) -> Contest:
+    result = await db.scalars(select(Contest).where(Contest.id == contest_id))
     contest = result.first()
 
     if not contest:
@@ -37,6 +46,36 @@ async def update_contest_state(db: AsyncSession, action: str) -> bool:
 
     return contest
 
+
+async def update_contest_title(db: AsyncSession, contest_id: int, title: str) -> UpdateContest:
+    result = await db.execute(select(Contest).where(Contest.id == contest_id))
+    contest = result.scalar_one_or_none()
+
+    if not contest:
+         return UpdateContest(contest=None, is_updated=False)
+    
+
+    if contest.title != title:
+        contest.title = title
+        await db.commit()
+
+    return UpdateContest(contest=contest, is_updated=True)
+
+
+
+
+async def update_contest_description(db: AsyncSession, contest_id: int, description: str) -> UpdateContest:
+    result = await db.execute(select(Contest).where(Contest.id == contest_id))
+    contest = result.scalar_one_or_none()
+
+    if not contest:
+         return UpdateContest(contest=None, is_updated=False)
+    
+    if contest.description != description:
+        contest.description = description
+        await db.commit()
+
+    return UpdateContest(contest=contest, is_updated=True)
 
 async def get_statistics_bot(db: AsyncSession):
         result = await db.execute(select(func.count(User.id)).where(User.is_active == True))

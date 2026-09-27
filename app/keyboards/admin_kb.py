@@ -1,11 +1,24 @@
 from app.keyboards.keyboard_init import InlineKeyboardBuilder
 from maxapi.types import CallbackButton
 
+from app.database.models import Contest
+
 async def admin_panel_kb():
     kb = InlineKeyboardBuilder()
     kb.add(CallbackButton(text='Конкурс', payload='admin_contest'))
     kb.add(CallbackButton(text='🏆 Управление конкурсом', payload='admin_contest_manage'))
     kb.add(CallbackButton(text='Статистика', payload='admin_statistics'))
+    return kb.adjust(1).as_markup()
+
+
+async def admin_contests_kb(contests: list[Contest]):
+    kb = InlineKeyboardBuilder()
+
+    for contest in contests:
+        kb.add(CallbackButton(text=f'{contest.description}', payload=f'admin_select_contest_{contest.id}'))
+    
+    kb.add(CallbackButton(text='Добавить ＋', payload='admin_add_contest'))
+    kb.add(CallbackButton(text='назад', payload='back_to_admin_main'))
     return kb.adjust(1).as_markup()
 
 
@@ -26,19 +39,25 @@ async def update_statistics_btn():
     return kb.adjust(1).as_markup()
 
 
-async def contest_admin_kb(voting_open: bool):
+async def contest_admin_kb(voting_open: bool, contest_id: int, is_enabled: bool):
     kb = InlineKeyboardBuilder()
-    kb.add(CallbackButton(text='📥 Заявки на модерации', payload='admin_contest_pending'))
-    kb.add(CallbackButton(text='✅ Допущенные работы', payload='admin_contest_approved'))
-    kb.add(CallbackButton(text='❌ Отклонённые работы', payload='admin_contest_rejected'))
+    kb.add(CallbackButton(text='📥 Заявки на модерации', payload=f'admin_contest_pending_{contest_id}'))
+    kb.add(CallbackButton(text='✅ Допущенные работы', payload=f'admin_contest_approved_{contest_id}'))
+    kb.add(CallbackButton(text='❌ Отклонённые работы', payload=f'admin_contest_rejected_{contest_id}'))
     if voting_open:
-        kb.add(CallbackButton(text='🔒 Закрыть голосование', payload='admin_contest_vote_close'))
+        kb.add(CallbackButton(text='🔒 Закрыть голосование', payload=f'admin_contest_vote_close_{contest_id}'))
     else:
-        kb.add(CallbackButton(text='🗳 Открыть голосование', payload='admin_contest_vote_open'))
-    kb.add(CallbackButton(text='📊 Результаты', payload='admin_contest_results'))
-    kb.add(CallbackButton(text='📤 Выгрузить CSV', payload='admin_contest_export'))
+        kb.add(CallbackButton(text='🗳 Открыть голосование', payload=f'admin_contest_vote_open_{contest_id}'))
+    kb.add(CallbackButton(text='📊 Результаты', payload=f'admin_contest_results_{contest_id}'))
+    kb.add(CallbackButton(text='📤 Выгрузить CSV', payload=f'admin_contest_export_{contest_id}'))
+    kb.add(CallbackButton(text='✏️ Изменить название', payload=f'admin_contest_edit_title_{contest_id}'))
+    kb.add(CallbackButton(text='✏️ Изменить описание', payload=f'admin_contest_edit_description_{contest_id}'))
+    if is_enabled:
+        kb.add(CallbackButton(text='❌ Отключить', payload=f'contest_off_{contest_id}'))
+    else:
+        kb.add(CallbackButton(text='✅ Включить', payload=f'contest_on_{contest_id}'))
     kb.add(CallbackButton(text='⬅ назад', payload='back_to_admin_main'))
-    return kb.adjust(1).as_markup()
+    return kb.adjust(1, 1, 1, 2, 2, 1, 1).as_markup()
 
 
 async def contest_moderation_kb(work_id: int, page: int, total_pages: int):
