@@ -429,7 +429,7 @@ async def _send_vote_card(event, session: AsyncSession, vote_session):
     index = vote_session.current_index
 
     if index >= len(order):
-        await _send_vote_summary(event, session, vote_session)
+        await _send_vote_summary(event, session, vote_session, vote_session.contest_id)
         return
 
     work = await crq.get_work_by_id(session, order[index])
@@ -481,7 +481,7 @@ async def _send_vote_summary(event, session: AsyncSession, vote_session, contest
             f'Вы выбрали {len(works)} работ:\n{numbers}\n\n'
             'Отправить голоса?'
         ),
-        attachments=[await kb.contest_vote_confirm_kb()],
+        attachments=[await kb.contest_vote_confirm_kb(contest_id)],
         parse_mode=ParseMode.HTML,
     )
 
@@ -563,7 +563,7 @@ async def contest_vote_pause(event: MessageCallback, session: AsyncSession):
     order = crq.get_session_order(vote_session)
     await event.message.answer(
         text=f'Вы просмотрели {vote_session.current_index} из {len(order)} работ.',
-        attachments=[await kb.contest_vote_pause_kb()],
+        attachments=[await kb.contest_vote_pause_kb(contest_id)],
     )
 
 
@@ -642,7 +642,7 @@ async def contest_vote_finish(event: MessageCallback, session: AsyncSession):
     vote_session = await crq.get_vote_session(session, contest_obj.id, event.from_user.user_id)
     if not vote_session:
         return
-    await _send_vote_summary(event, session, vote_session)
+    await _send_vote_summary(event, session, vote_session, contest_id)
 
 
 @contest.message_callback(F.callback.payload.startswith('contest_vote_submit_'))
@@ -660,7 +660,7 @@ async def contest_vote_submit(event: MessageCallback, session: AsyncSession):
     if len(selected) < settings.CONTEST_MIN_VOTES:
         await event.message.answer(
             f'Нужно выбрать минимум {settings.CONTEST_MIN_VOTES} работы.',
-            attachments=[await kb.contest_vote_pause_kb()],
+            attachments=[await kb.contest_vote_pause_kb(contest_id)],
         )
         return
 
