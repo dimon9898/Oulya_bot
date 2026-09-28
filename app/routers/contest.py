@@ -501,15 +501,21 @@ async def contest_vote_start(event: MessageCallback, session: AsyncSession):
                                    attachments=[await kb.contest_back_kb()])
         return
 
+    works = await crq.get_approved_works(session, contest_obj.id)
+    if not works:
+        await event.message.answer('Пока нет допущенных работ.',
+                                   attachments=[await kb.contest_back_kb()])
+        return
+
     vote_session = await crq.get_vote_session(session, contest_obj.id, event.from_user.user_id)
     if not vote_session:
-        works = await crq.get_approved_works(session, contest_obj.id)
-        if not works:
-            await event.message.answer('Пока нет допущенных работ.',
-                                       attachments=[await kb.contest_back_kb()])
-            return
         vote_session = await crq.create_vote_session(
             session, contest_obj.id, event.from_user.user_id, [w.id for w in works]
+        )
+    else:
+        # подтягиваем работы, которые были одобрены после создания сессии
+        vote_session = await crq.sync_vote_session_works(
+            session, vote_session, [w.id for w in works]
         )
 
     await event.message.answer(
@@ -535,6 +541,12 @@ async def contest_vote_resume(event: MessageCallback, session: AsyncSession):
         await event.message.answer('Сессия голосования не найдена.',
                                    attachments=[await kb.contest_back_kb()])
         return
+    works = await crq.get_approved_works(session, contest_obj.id)
+    if works:
+        # подтягиваем работы, которые были одобрены после создания сессии
+        vote_session = await crq.sync_vote_session_works(
+            session, vote_session, [w.id for w in works]
+        )
     await _send_vote_card(event, session, vote_session)
 
 

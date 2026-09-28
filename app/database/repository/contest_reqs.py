@@ -253,6 +253,62 @@ async def create_vote_session(
         return None
 
 
+async def sync_vote_session_works(
+    db: AsyncSession,
+    session: ContestVoteSession,
+    approved_work_ids: list[int],
+) -> ContestVoteSession:
+    """Приводит список работ в сессии голосования к актуальному набору
+    одобренных работ.
+
+    Сохраняет уже добавленные работы (их порядок и текущую позицию),
+    добавляет новые одобренные работы, появившиеся после создания сессии,
+    а также убирает работы, которые больше не одобрены.
+    """
+    try:
+        approved_set = set(approved_work_ids)
+        order = get_session_order(session)
+        selected = get_session_selected(session)
+
+        # оставляем уже добавленные работы, которые всё ещё одобрены
+        new_order = [wid for wid in order if wid in approved_set]
+        existing = set(new_order)
+
+        # добавляем новые одобренные работы, которых ещё нет в сессии
+        for wid in approved_work_ids:
+            if wid not in existing:
+                new_order.append(wid)
+                existing.add(wid)
+
+        # убираем из выбранных работы, которые больше не одобрены
+        new_selected = [wid for wid in selected if wid in approved_set]
+
+        order_changed = new_order != order
+        selected_changed = new_selected != selected
+
+        if not order_changed and not selected_changed:
+            return session
+
+        if order_changed:
+            # корректируем позицию, если перед текущей работой что-то удалили
+            removed_before = sum(
+                1 for wid in order[:session.current_index] if wid not in approved_set
+            )
+            session.order_json = json.dumps(new_order)
+            session.current_index = max(session.current_index - removed_before, 0)
+
+        if selected_changed:
+            session.selected_json = json.dumps(new_selected)
+
+        await db.commit()
+        await db.refresh(session)
+        return session
+    except SQLAlchemyError as exc:
+        await db.rollback()
+        logger.error(f'Ошибка при синхронизации сессии голосования: {exc}')
+        return session
+
+
 async def update_vote_session(
     db: AsyncSession,
     session: ContestVoteSession,
