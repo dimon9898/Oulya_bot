@@ -678,5 +678,6 @@ async def contest_vote_submit(event: MessageCallback, session: AsyncSession):
 
 @contest.message_callback(F.callback.payload == 'contest_already_voted')
 async def contest_already_voted(event: MessageCallback):
+    await event.message.delete()
     await event.message.answer('Вы уже проголосовали. Изменить голоса нельзя.',
                                attachments=[await kb.contest_back_kb()])
