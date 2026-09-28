@@ -239,7 +239,7 @@ async def contest_my_votes(event: MessageCallback, session: AsyncSession):
 @contest.message_callback(SubmitState.contest_id, F.callback.payload.startswith('contest_submit_'))
 async def contest_submit_start(event: MessageCallback, session: AsyncSession, context: MemoryContext):
     logger.info(f'contest_submit нажат пользователем {event.from_user.user_id}')
-    contest_id = int(event.callback.payload.split('_')[3])
+    contest_id = int(event.callback.payload.split('_')[2])
     await context.update_data(contest_id=contest_id)
     try:
         await event.message.delete()
