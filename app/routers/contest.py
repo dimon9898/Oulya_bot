@@ -456,7 +456,7 @@ async def _send_vote_card(event, session: AsyncSession, vote_session):
     )
 
 
-async def _send_vote_summary(event, session: AsyncSession, vote_session):
+async def _send_vote_summary(event, session: AsyncSession, vote_session, contest_id):
     selected = crq.get_session_selected(vote_session)
     if len(selected) < settings.CONTEST_MIN_VOTES:
         await event.message.answer(
@@ -464,7 +464,7 @@ async def _send_vote_summary(event, session: AsyncSession, vote_session):
                 f'Вы выбрали {len(selected)} работ.\n'
                 f'Для отправки голосования нужно выбрать минимум {settings.CONTEST_MIN_VOTES}.'
             ),
-            attachments=[await kb.contest_vote_pause_kb()],
+            attachments=[await kb.contest_vote_pause_kb(contest_id)],
         )
         return
 
