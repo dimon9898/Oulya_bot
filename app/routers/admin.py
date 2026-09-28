@@ -231,7 +231,7 @@ async def admin_contest_manage(event: MessageCallback, session: AsyncSession):
 @admin.message_callback(F.callback.payload.startswith('admin_select_contest_'))
 async def admin_select_contest(event: MessageCallback, session: AsyncSession):
     await event.message.delete()
-    contest_id = int(event.callback.payload('_')[3])
+    contest_id = int(event.callback.payload.split('_')[3])
     contest_obj = await crq.get_active_contest(session, contest_id)
     if not contest_obj:
         await event.message.answer('Конкурс не настроен.')
