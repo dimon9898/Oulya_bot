@@ -121,7 +121,7 @@ async def save_contest_title(event: MessageCreated, session: AsyncSession, conte
         await asyncio.sleep(1)
         await event.message.answer('Панель конкурса', 
                                    attachments=[ 
-                                       await kb.contest_admin_kb(result.contest.voting_open, result.contest.id, result.contest.enabled)
+                                       await kb.contest_admin_kb(result.contest.voting_open, result.contest.id)
                                     ])
     else:
         await event.message.answer('Ошибка при обновление название конкурса!')
@@ -152,7 +152,7 @@ async def save_contest_description(event: MessageCreated, session: AsyncSession,
         await event.message.answer('Описание конкурса обновлено! ✅')
         await asyncio.sleep(1)
         await event.message.answer('Панель конкурса', attachments=[
-            await kb.contest_admin_kb(result.contest.voting_open, result.contest.id, result.contest.enabled)
+            await kb.contest_admin_kb(result.contest.voting_open, result.contest.id)
         ])
     else:
         await event.message.answer('Ошибка при обновление описание конкурса!')
@@ -271,7 +271,7 @@ async def admin_select_contest(event: MessageCallback, session: AsyncSession):
         return
     await event.message.answer(
         text=f'<b>🏆 Управление конкурсом</b>\n\n{contest_obj.title or ""}',
-        attachments=[await kb.contest_admin_kb(contest_obj.voting_open, contest_obj.id, contest_obj.enabled)],
+        attachments=[await kb.contest_admin_kb(contest_obj.voting_open, contest_obj.id)],
         parse_mode=ParseMode.HTML,
     )
 
@@ -338,7 +338,7 @@ async def _show_moderation_page(event, session: AsyncSession, status: str, page:
     if total == 0:
         await event.message.answer(
             f'Нет работ со статусом «{crq.STATUS_LABELS.get(status, status)}».',
-            attachments=[await kb.contest_admin_kb(contest_obj.voting_open, contest_obj.id, contest_obj.enabled)],
+            attachments=[await kb.contest_admin_kb(contest_obj.voting_open, contest_obj.id)],
         )
         return
 
@@ -402,7 +402,7 @@ async def admin_contest_vote_open(event: MessageCallback, session: AsyncSession)
     await crq.set_voting_open(session, contest_obj.id, True)
     await event.message.delete()
     await event.message.answer('🗳 Голосование открыто.',
-                               attachments=[await kb.contest_admin_kb(True, contest_obj.id, contest_obj.enabled)])
+                               attachments=[await kb.contest_admin_kb(True, contest_obj.id)])
 
 
 @admin.message_callback(F.callback.payload.startswith('admin_contest_vote_close_'))
@@ -414,7 +414,7 @@ async def admin_contest_vote_close(event: MessageCallback, session: AsyncSession
     await crq.set_voting_open(session, contest_obj.id, False)
     await event.message.delete()
     await event.message.answer('🔒 Голосование закрыто.',
-                               attachments=[await kb.contest_admin_kb(False, contest_obj.id, contest_obj.enabled)])
+                               attachments=[await kb.contest_admin_kb(False, contest_obj.id)])
 
 
 @admin.message_callback(F.callback.payload.startswith('admin_contest_results'))
