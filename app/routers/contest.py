@@ -550,7 +550,7 @@ async def contest_vote_resume(event: MessageCallback, session: AsyncSession):
     await _send_vote_card(event, session, vote_session)
 
 
-@contest.message_callback(F.callback.payload == 'contest_vote_pause_')
+@contest.message_callback(F.callback.payload.startswith('contest_vote_pause_'))
 async def contest_vote_pause(event: MessageCallback, session: AsyncSession):
     await event.message.delete()
     contest_id = int(event.callback.payload.split('_')[3])
