@@ -1,8 +1,9 @@
 import asyncio
 import csv
 import io
+import logging
 from maxapi import Router, F
-from maxapi.types import MessageCreated, MessageCallback
+from maxapi.types import MessageCreated, MessageCallback, InputMediaBuffer
 from maxapi.types.attachments.upload import AttachmentPayload, AttachmentUpload
 from maxapi.enums.upload_type import UploadType
 from maxapi.context import MemoryContext, State, StatesGroup
@@ -16,6 +17,9 @@ import app.database.repository.admin_reqs as rq
 import app.database.repository.contest_reqs as crq
 
 from config import settings
+
+
+logger = logging.getLogger(__name__)
 
 
 class Form(StatesGroup):
@@ -436,18 +440,18 @@ async def admin_contest_results(event: MessageCallback, session: AsyncSession):
                                parse_mode=ParseMode.HTML)
 
 
-@admin.message_callback(F.callback.payload.startswith('admin_contest_export'))
-async def admin_contest_export(event: MessageCallback, session: AsyncSession):
-    contest_id = int(event.callback.payload.split('_')[3])
-    contest_obj = await crq.get_active_contest(session, contest_id)
-    if not contest_obj:
-        return
 
-    results = await crq.get_results(session, contest_obj.id)
+CSV_HEADER = ['Номер', 'Название', 'Автор', 'Возраст', 'Категория', 'Статус', 'Голосов']
+
+
+def build_results_csv(results: list) -> bytes:
+    """Собирает CSV в памяти и возвращает байты (UTF-8 с BOM для Excel)."""
     buffer = io.StringIO()
-    writer = csv.writer(buffer)
-    writer.writerow(['Номер', 'Название', 'Автор', 'Возраст', 'Категория', 'Статус', 'Голосов'])
-    for work, votes in results['all']:
+    # ';' лучше открывается в русской локали Excel; если нужна запятая, уберите delimiter
+    writer = csv.writer(buffer, delimiter=';')
+    writer.writerow(CSV_HEADER)
+
+    for work, votes in results:
         writer.writerow([
             work.number,
             work.title,
@@ -458,17 +462,43 @@ async def admin_contest_export(event: MessageCallback, session: AsyncSession):
             votes,
         ])
 
-    csv_bytes = buffer.getvalue().encode('utf-8-sig')
-    await event.message.answer(
-        text='📤 Выгрузка результатов:',
-        attachments=[
-            AttachmentUpload(
-                type=UploadType.FILE,
-                payload=AttachmentPayload(
-                    token=None,
+    return buffer.getvalue().encode('utf-8-sig')
+
+
+@admin.message_callback(F.callback.payload.startswith('admin_contest_export'))
+async def admin_contest_export(event: MessageCallback, session: AsyncSession):
+    # payload вида: admin_contest_export_<contest_id>
+    try:
+        contest_id = int(event.callback.payload.split('_')[3])
+    except (IndexError, ValueError):
+        logger.warning('Некорректный payload: %s', event.callback.payload)
+        return
+
+    contest_obj = await crq.get_active_contest(session, contest_id)
+    if not contest_obj:
+        await event.message.answer('⚠️ Конкурс не найден или уже неактивен.')
+        return
+
+    results = await crq.get_results(session, contest_obj.id)
+    all_results = results.get('all', [])
+
+    if not all_results:
+        await event.message.answer('ℹ️ В этом конкурсе пока нет работ для выгрузки.')
+        return
+
+    csv_bytes = build_results_csv(all_results)
+
+    try:
+        await event.message.answer(
+            text=f'📤 Выгрузка результатов конкурса «{contest_obj.id}»:',
+            attachments=[
+                InputMediaBuffer(
+                    buffer=csv_bytes,
+                    type=UploadType.FILE,
                     filename=f'contest_{contest_obj.id}_results.csv',
-                    data=csv_bytes,
-                ),
-            )
-        ],
-    )
+                )
+            ],
+        )
+    except Exception:
+        logger.exception('Не удалось отправить выгрузку конкурса %s', contest_obj.id)
+        await event.message.answer('❌ Не удалось отправить файл. Попробуйте позже.')
