@@ -276,6 +276,27 @@ async def admin_select_contest(event: MessageCallback, session: AsyncSession):
     )
 
 
+@admin.message_callback(F.callback.payload.startswith('admin_contest_delete_'))
+async def admin_contest_delete(event: MessageCallback, session: AsyncSession):
+    contest_id = int(event.callback.payload.split('_')[3])
+    contest_obj = await rq.update_contest_state(session, 'off', contest_id)
+    if not contest_obj:
+        await event.message.answer('Конкурс не найден.')
+        return
+
+    await event.message.delete()
+    contests = await crq.get_all_contests(session)
+    active = [c for c in contests if c.enabled]
+    if not active:
+        await event.message.answer('Конкурс удалён ✅\n\nНет активных конкурсов.')
+        return
+
+    await event.message.answer(
+        'Конкурс удалён ✅\n\nВыберите конкурс:',
+        attachments=[await kb.admin_contests_kb(contests)],
+    )
+
+
 @admin.message_callback(F.callback.payload.startswith('admin_contest_pending_'))
 async def admin_contest_pending(event: MessageCallback, session: AsyncSession):
     await event.message.delete()

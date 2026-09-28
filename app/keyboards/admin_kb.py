@@ -14,11 +14,13 @@ async def admin_panel_kb():
 async def admin_contests_kb(contests: list[Contest]):
     kb = InlineKeyboardBuilder()
 
-    for contest in contests:
+    active = [c for c in contests if c.enabled]
+
+    for contest in active:
         label = contest.title or contest.description or 'Без названия'
         icon = '✅' if contest.enabled else '❌'
         kb.add(CallbackButton(text=f'{icon} {label} · #{contest.id}', payload=f'admin_select_contest_{contest.id}'))
-    
+
     kb.add(CallbackButton(text='Добавить ＋', payload='admin_add_contest'))
     kb.add(CallbackButton(text='назад', payload='back_to_admin_main'))
     return kb.adjust(1).as_markup()
@@ -58,8 +60,9 @@ async def contest_admin_kb(voting_open: bool, contest_id: int, is_enabled: bool)
         kb.add(CallbackButton(text='❌ Отключить', payload=f'contest_off_{contest_id}'))
     else:
         kb.add(CallbackButton(text='✅ Включить', payload=f'contest_on_{contest_id}'))
+    kb.add(CallbackButton(text='🗑 Удалить конкурс', payload=f'admin_contest_delete_{contest_id}'))
     kb.add(CallbackButton(text='⬅ назад', payload='back_to_admin_main'))
-    return kb.adjust(1, 1, 1, 1, 2, 2, 1, 1).as_markup()
+    return kb.adjust(1, 1, 1, 1, 2, 2, 1, 1, 1).as_markup()
 
 
 async def contest_moderation_kb(work_id: int, page: int, total_pages: int, status: str, contest_id: int):
