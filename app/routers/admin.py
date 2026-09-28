@@ -46,22 +46,6 @@ async def back_to_admin_main(event: MessageCallback):
     await event.message.answer('Доступ к админ-панели разрешён!', 
                                 attachments=[await kb.admin_panel_kb()])
 
-@admin.message_callback(F.callback.payload == 'admin_contest')
-async def admin_contest(event: MessageCallback, session: AsyncSession):
-    await event.message.delete()
-    contest = await rq.get_contest_status(session)
-
-    if not contest:
-        await event.message.answer('Конкурс ещё не настроен.')
-        return
-    
-    if contest.enabled:
-        response = 'Кнопка "Конкурс месяца" включена ✅'
-    else:
-        response = 'Кнопка "Конкурс месяца" отключена ❌'
-
-    await event.message.answer(text=response, attachments=[await kb.contest_kb(contest.enabled)])        
-
 
 @admin.message_callback(F.callback.payload.startswith('contest_'))
 async def contest_state(event: MessageCallback, session: AsyncSession):

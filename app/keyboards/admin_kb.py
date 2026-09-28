@@ -5,7 +5,6 @@ from app.database.models import Contest
 
 async def admin_panel_kb():
     kb = InlineKeyboardBuilder()
-    kb.add(CallbackButton(text='Конкурс', payload='admin_contest'))
     kb.add(CallbackButton(text='🏆 Управление конкурсом', payload='admin_contest_manage'))
     kb.add(CallbackButton(text='Статистика', payload='admin_statistics'))
     return kb.adjust(1).as_markup()
