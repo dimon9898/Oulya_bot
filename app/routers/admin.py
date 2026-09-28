@@ -99,7 +99,7 @@ async def edit_contest_title_prompt(event: MessageCallback, session: AsyncSessio
     await event.message.delete()
     contest_id = int(event.callback.payload.split('_')[4])
     await event.message.answer('Введите название конкурса: ')
-    await context.update_data(contest_id=contest_id)
+    await context.update_data(contest_id=contest_id, is_new=False)
     await context.set_state(Form.title)
 
 
@@ -111,9 +111,13 @@ async def save_contest_title(event: MessageCreated, session: AsyncSession, conte
     data = await context.get_data()
     contest_id = int(data.get('contest_id', ''))
     title = data.get('title', '')
+    is_new = bool(data.get('is_new', False))
     result = await rq.update_contest_title(session, contest_id, title)
     if result.is_updated:
-        await event.message.answer('Название конкурса обновлено! ✅')
+        if is_new:
+            await event.message.answer('Конкурс создан! ✅')
+        else:
+            await event.message.answer('Название конкурса обновлено! ✅')
         await asyncio.sleep(1)
         await event.message.answer('Панель конкурса', 
                                    attachments=[ 
@@ -253,7 +257,7 @@ async def admin_add_contest(event: MessageCallback, session: AsyncSession, conte
         await event.message.answer('Не удалось создать конкурс.')
         return
     await event.message.answer('Введите название конкурса: ')
-    await context.update_data(contest_id=contest_obj.id)
+    await context.update_data(contest_id=contest_obj.id, is_new=True)
     await context.set_state(Form.title)
 
 
