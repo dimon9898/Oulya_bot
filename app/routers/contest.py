@@ -211,7 +211,7 @@ async def contest_find_work_result(event: MessageCreated, session: AsyncSession,
     )
 
 
-@contest.message_callback(F.callback.payload == 'contest_my_votes')
+@contest.message_callback(F.callback.payload.startswith('contest_my_votes_'))
 async def contest_my_votes(event: MessageCallback, session: AsyncSession):
     await event.message.delete()
     contest_id = int(event.callback.payload.split('_')[3])
@@ -602,7 +602,7 @@ async def contest_unselect(event: MessageCallback, session: AsyncSession):
 
 
 @contest.message_callback(F.callback.payload.startswith('contest_vote_prev_'))
-async def contest_vote_next(event: MessageCallback, session: AsyncSession):
+async def contest_vote_prev(event: MessageCallback, session: AsyncSession):
     contest_id = int(event.callback.payload.split('_')[3])
     contest_obj = await crq.get_active_contest(session, contest_id)
     vote_session = await crq.get_vote_session(session, contest_obj.id, event.from_user.user_id)
