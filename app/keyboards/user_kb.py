@@ -132,7 +132,7 @@ async def contest_main_kb(submission_open: bool, voting_open: bool, has_finished
     if voting_open and not has_finished_vote:
         kb.add(CallbackButton(text='🗳 Голосовать', payload=f'contest_vote_start_{contest_id}'))
     if voting_open and has_finished_vote:
-        kb.add(CallbackButton(text='✅ Вы уже проголосовали', payload=f'contest_already_voted_{contest_id}'))
+        kb.add(CallbackButton(text='✅ Вы уже проголосовали', payload='contest_already_voted'))
     kb.add(CallbackButton(text='🖼 Все работы', payload=f'contest_all_works_{contest_id}'))
     kb.add(CallbackButton(text='🔍 Найти работу по номеру', payload=f'contest_find_work_{contest_id}'))
     kb.add(CallbackButton(text='📋 Мои голоса', payload=f'contest_my_votes_{contest_id}'))
