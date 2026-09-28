@@ -109,10 +109,20 @@ async def edit_contest_title_prompt(event: MessageCallback, session: AsyncSessio
 async def save_contest_title(event: MessageCreated, session: AsyncSession, context: MemoryContext):
     await context.update_data(title=event.message.body.text)
     data = await context.get_data()
-    contest_id = int(data.get('contest_id', ''))
     title = data.get('title', '')
     is_new = bool(data.get('is_new', False))
-    result = await rq.update_contest_title(session, contest_id, title)
+
+    if is_new:
+        contest = await rq.create_contest(session, title)
+        if not contest:
+            await event.message.answer('Ошибка при создании конкурса!')
+            await context.clear()
+            return
+        result = rq.UpdateContest(contest=contest, is_updated=True)
+    else:
+        contest_id = int(data.get('contest_id', ''))
+        result = await rq.update_contest_title(session, contest_id, title)
+
     if result.is_updated:
         if is_new:
             await event.message.answer('Конкурс создан! ✅')
@@ -250,14 +260,10 @@ async def admin_contest_manage(event: MessageCallback, session: AsyncSession):
 
 
 @admin.message_callback(F.callback.payload == 'admin_add_contest', IsAdmin())
-async def admin_add_contest(event: MessageCallback, session: AsyncSession, context: MemoryContext):
+async def admin_add_contest(event: MessageCallback, context: MemoryContext):
     await event.message.delete()
-    contest_obj = await rq.create_contest(session)
-    if not contest_obj:
-        await event.message.answer('Не удалось создать конкурс.')
-        return
     await event.message.answer('Введите название конкурса: ')
-    await context.update_data(contest_id=contest_obj.id, is_new=True)
+    await context.update_data(is_new=True)
     await context.set_state(Form.title)
 
 

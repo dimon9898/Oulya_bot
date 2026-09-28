@@ -25,9 +25,9 @@ async def get_contest_status(db: AsyncSession):
     return contest
 
 
-async def create_contest(db: AsyncSession) -> Contest:
+async def create_contest(db: AsyncSession, title: str = 'Новый конкурс') -> Contest:
     contest = Contest(
-        title='Новый конкурс',
+        title=title,
         description='Новый конкурс',
         enabled=True,
         voting_open=False,
