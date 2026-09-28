@@ -29,7 +29,7 @@ async def create_contest(db: AsyncSession) -> Contest:
     contest = Contest(
         title='Новый конкурс',
         description='Новый конкурс',
-        enabled=True,
+        enabled=False,
         voting_open=False,
     )
     db.add(contest)

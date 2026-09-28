@@ -41,6 +41,12 @@ async def get_all_active_contests(db: AsyncSession):
 
 
 
+async def get_all_contests(db: AsyncSession) -> list[Contest]:
+    result = await db.execute(select(Contest).order_by(Contest.id.asc()))
+    return list(result.scalars().all())
+
+
+
 
 async def get_active_contest(db: AsyncSession, contest_id: int) -> Contest | None:
     result = await db.scalars(select(Contest)

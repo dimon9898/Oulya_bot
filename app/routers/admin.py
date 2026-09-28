@@ -50,6 +50,10 @@ async def back_to_admin_main(event: MessageCallback):
 async def admin_contest(event: MessageCallback, session: AsyncSession):
     await event.message.delete()
     contest = await rq.get_contest_status(session)
+
+    if not contest:
+        await event.message.answer('Конкурс ещё не настроен.')
+        return
     
     if contest.enabled:
         response = 'Кнопка "Конкурс месяца" включена ✅'
@@ -63,19 +67,30 @@ async def admin_contest(event: MessageCallback, session: AsyncSession):
 async def contest_state(event: MessageCallback, session: AsyncSession):
     parts = event.callback.payload.split('_')
     action = parts[1]
-    contest_id = int(parts[2]) if len(parts) > 2 and parts[2].isdigit() else 1
+
+    if len(parts) > 2 and parts[2].isdigit():
+        contest_id = int(parts[2])
+    else:
+        current = await rq.get_contest_status(session)
+        if not current:
+            await event.message.delete()
+            await event.message.answer('Конкурс ещё не настроен.')
+            return
+        contest_id = current.id
+
     await event.message.delete()
 
-    if action == 'off':
-        contest = await rq.update_contest_state(session, action, contest_id)
-        if contest and contest.enabled == False:
-            await event.message.answer(f'Конкурс "{contest.description}" отключен ❌',
-                                       attachments=[await kb.contest_kb(contest.enabled)])
-    elif action == 'on':
-        contest = await rq.update_contest_state(session, action, contest_id)
-        if contest:
-            await event.message.answer(f'Конкурс "{contest.description}" включен ✅', 
-                                       attachments=[await kb.contest_kb(contest.enabled)])
+    contest = await rq.update_contest_state(session, action, contest_id)
+    if not contest:
+        await event.message.answer('Конкурс не найден.')
+        return
+
+    if contest.enabled:
+        await event.message.answer(f'Конкурс "{contest.description}" включен ✅', 
+                                   attachments=[await kb.contest_kb(contest.enabled)])
+    else:
+        await event.message.answer(f'Конкурс "{contest.description}" отключен ❌',
+                                   attachments=[await kb.contest_kb(contest.enabled)])
 
 
 
@@ -226,22 +241,20 @@ async def _send_work_card(event, work, page: int, total_pages: int, status: str,
 @admin.message_callback(F.callback.payload == 'admin_contest_manage')
 async def admin_contest_manage(event: MessageCallback, session: AsyncSession):
     await event.message.delete()
-    contests = await crq.get_all_active_contests(session)
-    await event.message.answer('Выберите активный конкурс:', attachments=[await kb.admin_contests_kb(contests)])
+    contests = await crq.get_all_contests(session)
+    await event.message.answer('Выберите конкурс:', attachments=[await kb.admin_contests_kb(contests)])
 
 
-@admin.message_callback(F.callback.payload == 'admin_add_contest')
-async def admin_add_contest(event: MessageCallback, session: AsyncSession):
+@admin.message_callback(F.callback.payload == 'admin_add_contest', IsAdmin())
+async def admin_add_contest(event: MessageCallback, session: AsyncSession, context: MemoryContext):
     await event.message.delete()
     contest_obj = await rq.create_contest(session)
     if not contest_obj:
         await event.message.answer('Не удалось создать конкурс.')
         return
-    await event.message.answer(
-        text='<b>🏆 Новый конкурс создан</b>\n\nЗадайте название и описание через панель конкурса.',
-        attachments=[await kb.contest_admin_kb(contest_obj.voting_open, contest_obj.id, contest_obj.enabled)],
-        parse_mode=ParseMode.HTML,
-    )
+    await event.message.answer('Введите название конкурса: ')
+    await context.update_data(contest_id=contest_obj.id)
+    await context.set_state(Form.title)
 
 
 @admin.message_callback(F.callback.payload.startswith('admin_select_contest_'))

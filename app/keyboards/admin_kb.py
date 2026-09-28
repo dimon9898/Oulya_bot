@@ -15,7 +15,9 @@ async def admin_contests_kb(contests: list[Contest]):
     kb = InlineKeyboardBuilder()
 
     for contest in contests:
-        kb.add(CallbackButton(text=f'{contest.description}', payload=f'admin_select_contest_{contest.id}'))
+        label = contest.title or contest.description or 'Без названия'
+        icon = '✅' if contest.enabled else '❌'
+        kb.add(CallbackButton(text=f'{icon} {label} · #{contest.id}', payload=f'admin_select_contest_{contest.id}'))
     
     kb.add(CallbackButton(text='Добавить ＋', payload='admin_add_contest'))
     kb.add(CallbackButton(text='назад', payload='back_to_admin_main'))
