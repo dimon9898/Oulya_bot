@@ -361,10 +361,12 @@ async def admin_contest_vote_close(event: MessageCallback, session: AsyncSession
                                attachments=[await kb.contest_admin_kb(False, contest_obj.id, contest_obj.enabled)])
 
 
-@admin.message_callback(F.callback.payload == 'admin_contest_results')
+@admin.message_callback(F.callback.payload.startswith('admin_contest_results'))
 async def admin_contest_results(event: MessageCallback, session: AsyncSession):
     await event.message.delete()
-    contest_obj = await crq.get_active_contest(session)
+    parts = event.callback.payload.split('_')
+    contest_id = int(parts[3]) if len(parts) > 3 and parts[3].isdigit() else None
+    contest_obj = await crq.get_active_contest(session, contest_id) if contest_id is not None else await crq.get_active_contest(session)
     if not contest_obj:
         return
 
@@ -389,9 +391,11 @@ async def admin_contest_results(event: MessageCallback, session: AsyncSession):
                                parse_mode=ParseMode.HTML)
 
 
-@admin.message_callback(F.callback.payload == 'admin_contest_export')
+@admin.message_callback(F.callback.payload.startswith('admin_contest_export'))
 async def admin_contest_export(event: MessageCallback, session: AsyncSession):
-    contest_obj = await crq.get_active_contest(session)
+    parts = event.callback.payload.split('_')
+    contest_id = int(parts[3]) if len(parts) > 3 and parts[3].isdigit() else None
+    contest_obj = await crq.get_active_contest(session, contest_id) if contest_id is not None else await crq.get_active_contest(session)
     if not contest_obj:
         return
 
