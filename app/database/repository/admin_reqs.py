@@ -25,21 +25,30 @@ async def get_contest_status(db: AsyncSession):
     return contest
 
 
+async def create_contest(db: AsyncSession) -> Contest:
+    contest = Contest(
+        title='Новый конкурс',
+        description='Новый конкурс',
+        enabled=True,
+        voting_open=False,
+    )
+    db.add(contest)
+    await db.commit()
+    await db.refresh(contest)
+    return contest
+
+
 async def update_contest_state(db: AsyncSession, action: str, contest_id: int) -> Contest:
     result = await db.scalars(select(Contest).where(Contest.id == contest_id))
     contest = result.first()
 
     if not contest:
         return False
-    
+
     if action == 'off':
         contest.enabled = False
-        await db.commit()
-        await db.refresh(contest)
-        return contest
-    
-    contest.description = action
-    contest.enabled = True
+    else:
+        contest.enabled = True
 
     await db.commit()
     await db.refresh(contest)

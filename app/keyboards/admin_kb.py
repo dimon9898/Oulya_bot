@@ -57,19 +57,19 @@ async def contest_admin_kb(voting_open: bool, contest_id: int, is_enabled: bool)
     else:
         kb.add(CallbackButton(text='✅ Включить', payload=f'contest_on_{contest_id}'))
     kb.add(CallbackButton(text='⬅ назад', payload='back_to_admin_main'))
-    return kb.adjust(1, 1, 1, 2, 2, 1, 1).as_markup()
+    return kb.adjust(1, 1, 1, 1, 2, 2, 1, 1).as_markup()
 
 
-async def contest_moderation_kb(work_id: int, page: int, total_pages: int):
+async def contest_moderation_kb(work_id: int, page: int, total_pages: int, status: str, contest_id: int):
     kb = InlineKeyboardBuilder()
     kb.add(CallbackButton(text='✅ Допустить', payload=f'admin_work_approve_{work_id}'))
     kb.add(CallbackButton(text='❌ Отклонить', payload=f'admin_work_reject_{work_id}'))
     kb.add(CallbackButton(text='❓ Запросить подтверждение', payload=f'admin_work_proof_{work_id}'))
     nav = []
     if page > 0:
-        nav.append(CallbackButton(text='⬅', payload=f'admin_contest_page_{page - 1}'))
+        nav.append(CallbackButton(text='⬅', payload=f'admin_contest_page_{status}_{contest_id}_{page - 1}'))
     if page < total_pages - 1:
-        nav.append(CallbackButton(text='➡', payload=f'admin_contest_page_{page + 1}'))
+        nav.append(CallbackButton(text='➡', payload=f'admin_contest_page_{status}_{contest_id}_{page + 1}'))
     if nav:
         kb.add(*nav)
     kb.add(CallbackButton(text='⬅ назад', payload='admin_contest_manage'))
@@ -83,9 +83,9 @@ async def back_to_admin_contest_manage():
 
 
 
-async def contest_results_kb():
+async def contest_results_kb(contest_id: int):
     kb = InlineKeyboardBuilder()
-    kb.add(CallbackButton(text='♻️ Обновить', payload='admin_contest_results'))
+    kb.add(CallbackButton(text='♻️ Обновить', payload=f'admin_contest_results_{contest_id}'))
     kb.add(CallbackButton(text='⬅ назад', payload='admin_contest_manage'))
     return kb.adjust(1).as_markup()
 
