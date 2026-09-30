@@ -61,7 +61,7 @@ async def contest_admin_kb(voting_open: bool, contest_id: int, results_published
     kb.add(CallbackButton(text='✏️ Изменить описание', payload=f'admin_contest_edit_description_{contest_id}'))
     kb.add(CallbackButton(text='🗑 Удалить конкурс', payload=f'admin_contest_delete_{contest_id}'))
     kb.add(CallbackButton(text='⬅ назад', payload='back_to_admin_main'))
-    return kb.adjust(1, 1, 1, 1, 2, 1, 2, 1, 1).as_markup()
+    return kb.adjust(1, 1, 1, 1, 1, 1, 1, 2, 1, 1).as_markup()
 
 
 async def contest_moderation_kb(work_id: int, page: int, total_pages: int, status: str, contest_id: int):
