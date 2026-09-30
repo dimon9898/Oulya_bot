@@ -435,13 +435,18 @@ async def admin_contest_vote_close(event: MessageCallback, session: AsyncSession
 
 async def _notify_participants_results(event, session: AsyncSession, contest_obj):
     """Отправляет персональные уведомления участникам конкурса
-    об опубликованных результатах."""
+    об опубликованных результатах.
+
+    Учитывает равенство голосов: работы с одинаковым числом голосов
+    получают одно и то же место (олимпийское ранжирование).
+    """
     results = await crq.get_results(session, contest_obj.id)
 
+    # work_id -> место (олимпийское ранжирование), из кортежей (work, votes, place)
     place_map: dict[int, int] = {}
     for _category, rows in results.get('by_category', {}).items():
-        for idx, (work, _votes) in enumerate(rows, start=1):
-            place_map[work.id] = idx
+        for work, _votes, place in rows:
+            place_map[work.id] = place
 
     # на каждого участника — одно сообщение по его лучшей работе
     best_by_user: dict[int, tuple] = {}
@@ -455,19 +460,28 @@ async def _notify_participants_results(event, session: AsyncSession, contest_obj
 
     for user_id, (work, votes) in best_by_user.items():
         place = place_map.get(work.id)
-        if place in medals:
+
+        if votes > 0 and place in medals:
             place_line = f'{medals[place]} {place} место'
-        elif place:
+        elif votes > 0 and place:
             place_line = f'{place} место'
         else:
-            place_line = f'{votes} голосов'
+            place_line = None
 
-        text = (
-            f'🏅 Результаты конкурса «{title}» опубликованы!\n\n'
-            f'Ваша работа №{work.number:03d} «{work.title}» набрала {votes} голосов '
-            f'и заняла {place_line} в своей категории.\n\n'
-            'Спасибо за участие! 💛'
-        )
+        if place_line:
+            text = (
+                f'🏅 Результаты конкурса «{title}» опубликованы!\n\n'
+                f'Ваша работа №{work.number:03d} «{work.title}» набрала {votes} голосов '
+                f'и заняла {place_line} в своей категории.\n\n'
+                'Спасибо за участие! 💛'
+            )
+        else:
+            text = (
+                f'🏅 Результаты конкурса «{title}» опубликованы!\n\n'
+                f'Ваша работа №{work.number:03d} «{work.title}» набрала {votes} голосов.\n\n'
+                'Спасибо за участие! 💛'
+            )
+
         try:
             await event.bot.send_message(chat_id=user_id, text=text)
         except Exception:
@@ -519,16 +533,31 @@ async def admin_contest_results(event: MessageCallback, session: AsyncSession):
                                    attachments=[await kb.contest_results_kb(contest_obj.id)])
         return
 
+    medals = {1: '🥇', 2: '🥈', 3: '🥉'}
     text = '<b>📊 Результаты конкурса</b>\n\n'
+    has_any_votes = False
+
     for category, label in crq.CATEGORY_LABELS.items():
         text += f'<b>🏆 {label}</b>\n'
-        cat_rows = results['by_category'].get(category, [])
+        # показываем работы в первой тройке мест (включая все делящие место),
+        # но не работы с нулём голосов
+        cat_rows = [
+            (work, votes, place)
+            for work, votes, place in results['by_category'].get(category, [])
+            if votes > 0 and place <= 3
+        ]
         if not cat_rows:
-            text += '— нет работ\n\n'
+            text += '— нет голосов\n\n'
             continue
-        for work, votes in cat_rows[:3]:
-            text += f'№{work.number:03d} «{work.title}» — {votes} голосов\n'
+        has_any_votes = True
+        for work, votes, place in cat_rows:
+            medal = medals.get(place, '•')
+            text += f'{medal} №{work.number:03d} «{work.title}» — {votes} голосов\n'
         text += '\n'
+
+    if not has_any_votes:
+        text = ('<b>📊 Результаты конкурса</b>\n\n'
+                'Голоса ещё не отданы — итогов пока нет.')
 
     await event.message.answer(text=text, attachments=[await kb.contest_results_kb(contest_obj.id)],
                                parse_mode=ParseMode.HTML)

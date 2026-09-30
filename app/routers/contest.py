@@ -126,15 +126,29 @@ async def contest_results(event: MessageCallback, session: AsyncSession):
 
     medals = {1: '🥇', 2: '🥈', 3: '🥉'}
     text = '<b>🏅 Результаты конкурса</b>\n\n'
+    has_any_votes = False
+
     for category, label in crq.CATEGORY_LABELS.items():
         text += f'<b>🏆 {label}</b>\n'
-        cat_rows = results['by_category'].get(category, [])
+        # работы в первой тройке мест (включая все делящие место),
+        # исключая работы с нулём голосов
+        cat_rows = [
+            (work, votes, place)
+            for work, votes, place in results['by_category'].get(category, [])
+            if votes > 0 and place <= 3
+        ]
         if not cat_rows:
-            text += '— нет работ\n\n'
+            text += '— нет голосов\n\n'
             continue
-        for place, (work, votes) in enumerate(cat_rows[:3], start=1):
-            text += f'{medals.get(place, "•")} №{work.number:03d} «{work.title}» — {votes} голосов\n'
+        has_any_votes = True
+        for work, votes, place in cat_rows:
+            medal = medals.get(place, '•')
+            text += f'{medal} №{work.number:03d} «{work.title}» — {votes} голосов\n'
         text += '\n'
+
+    if not has_any_votes:
+        text = ('<b>🏅 Результаты конкурса</b>\n\n'
+                'Голоса ещё не отданы — итоги будут объявлены позже.')
 
     await event.message.answer(
         text=text,

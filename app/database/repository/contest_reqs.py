@@ -393,6 +393,26 @@ async def get_user_votes(
     return list(result.all())
 
 
+def assign_places(rows: list) -> list:
+    """Присваивает места по числу голосов (олимпийское ранжирование).
+
+    rows — список (work, votes), уже отсортированный по убыванию голосов.
+    При равенстве голосов работы получают одно и то же место, а следующее
+    место «перепрыгивается» (1, 1, 3, 4, 4, 6, ...).
+
+    Возвращает список кортежей (work, votes, place).
+    """
+    placed = []
+    prev_votes = None
+    current_place = 0
+    for idx, (work, votes) in enumerate(rows, start=1):
+        if prev_votes is None or votes != prev_votes:
+            current_place = idx
+        placed.append((work, votes, current_place))
+        prev_votes = votes
+    return placed
+
+
 async def get_results(db: AsyncSession, contest_id: int) -> dict:
     stmt = (
         select(ContestWork, func.count(ContestVote.id).label('votes_count'))
@@ -400,7 +420,8 @@ async def get_results(db: AsyncSession, contest_id: int) -> dict:
         .where(ContestWork.contest_id == contest_id)
         .where(ContestWork.status == 'approved')
         .group_by(ContestWork.id)
-        .order_by(func.count(ContestVote.id).desc())
+        # при равенстве голосов — стабильный порядок по номеру работы
+        .order_by(func.count(ContestVote.id).desc(), ContestWork.number.asc())
     )
     result = await db.execute(stmt)
     rows = result.all()
@@ -408,6 +429,10 @@ async def get_results(db: AsyncSession, contest_id: int) -> dict:
     by_category: dict[str, list] = {'child': [], 'teen': [], 'adult': []}
     for work, votes_count in rows:
         by_category.setdefault(work.category, []).append((work, votes_count))
+
+    # присваиваем места внутри категорий с учётом равенства голосов
+    for category in by_category:
+        by_category[category] = assign_places(by_category[category])
 
     return {
         'all': rows,
