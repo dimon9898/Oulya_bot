@@ -28,7 +28,7 @@ class Form(StatesGroup):
 
 
 class IsAdmin(BaseFilter):
-    async def __call__(self, event: MessageCreated) -> bool:
+    async def __call__(self, event: MessageCreated | MessageCallback) -> bool:
         if event.from_user is None:
             return False
         
@@ -44,14 +44,14 @@ async def cmd_admin(event: MessageCreated):
 
 
 
-@admin.message_callback(F.callback.payload == 'back_to_admin_main')
+@admin.message_callback(F.callback.payload == 'back_to_admin_main', IsAdmin())
 async def back_to_admin_main(event: MessageCallback):
     await event.message.delete()
     await event.message.answer('Доступ к админ-панели разрешён!', 
                                 attachments=[await kb.admin_panel_kb()])
 
 
-@admin.message_callback(F.callback.payload.startswith('contest_'))
+@admin.message_callback(F.callback.payload.startswith('contest_'), IsAdmin())
 async def contest_state(event: MessageCallback, session: AsyncSession):
     parts = event.callback.payload.split('_')
     action = parts[1]
@@ -82,7 +82,7 @@ async def contest_state(event: MessageCallback, session: AsyncSession):
 
 
 
-@admin.message_callback(F.callback.payload.startswith('admin_contest_edit_title_'))
+@admin.message_callback(F.callback.payload.startswith('admin_contest_edit_title_'), IsAdmin())
 async def edit_contest_title_prompt(event: MessageCallback, session: AsyncSession, context: MemoryContext):
     await event.message.delete()
     contest_id = int(event.callback.payload.split('_')[4])
@@ -93,7 +93,7 @@ async def edit_contest_title_prompt(event: MessageCallback, session: AsyncSessio
 
 
 
-@admin.message_created(Form.title, F.message.body.text)
+@admin.message_created(Form.title, F.message.body.text, IsAdmin())
 async def save_contest_title(event: MessageCreated, session: AsyncSession, context: MemoryContext):
     await context.update_data(title=event.message.body.text)
     data = await context.get_data()
@@ -128,7 +128,7 @@ async def save_contest_title(event: MessageCreated, session: AsyncSession, conte
 
 
 
-@admin.message_callback(F.callback.payload.startswith('admin_contest_edit_description_'))
+@admin.message_callback(F.callback.payload.startswith('admin_contest_edit_description_'), IsAdmin())
 async def edit_contest_description_prompt(event: MessageCallback, session: AsyncSession, context: MemoryContext):
     await event.message.delete()
     contest_id = int(event.callback.payload.split('_')[4])
@@ -139,7 +139,7 @@ async def edit_contest_description_prompt(event: MessageCallback, session: Async
 
 
 
-@admin.message_created(Form.description, F.message.body.text)
+@admin.message_created(Form.description, F.message.body.text, IsAdmin())
 async def save_contest_description(event: MessageCreated, session: AsyncSession, context: MemoryContext):
     await context.update_data(description=event.message.body.text)
     data = await context.get_data()
@@ -202,7 +202,7 @@ async def admin_statistics(event: MessageCallback, session: AsyncSession):
                                ])      
     
 
-@admin.message_callback(F.callback.payload == 'admin_update_statistics')
+@admin.message_callback(F.callback.payload == 'admin_update_statistics', IsAdmin())
 async def admin_update_statistics(event: MessageCallback, session: AsyncSession):
     await admin_statistics(event, session)
 
@@ -240,7 +240,7 @@ async def _send_work_card(event, work, page: int, total_pages: int, status: str,
     )
 
 
-@admin.message_callback(F.callback.payload == 'admin_contest_manage')
+@admin.message_callback(F.callback.payload == 'admin_contest_manage', IsAdmin())
 async def admin_contest_manage(event: MessageCallback, session: AsyncSession):
     await event.message.delete()
     contests = await crq.get_all_contests(session)
@@ -255,7 +255,7 @@ async def admin_add_contest(event: MessageCallback, context: MemoryContext):
     await context.set_state(Form.title)
 
 
-@admin.message_callback(F.callback.payload.startswith('admin_select_contest_'))
+@admin.message_callback(F.callback.payload.startswith('admin_select_contest_'), IsAdmin())
 async def admin_select_contest(event: MessageCallback, session: AsyncSession):
     await event.message.delete()
     contest_id = int(event.callback.payload.split('_')[3])
@@ -270,7 +270,7 @@ async def admin_select_contest(event: MessageCallback, session: AsyncSession):
     )
 
 
-@admin.message_callback(F.callback.payload.startswith('admin_contest_delete_'))
+@admin.message_callback(F.callback.payload.startswith('admin_contest_delete_'), IsAdmin())
 async def admin_contest_delete(event: MessageCallback, session: AsyncSession):
     contest_id = int(event.callback.payload.split('_')[3])
     contest_obj = await rq.update_contest_state(session, 'off', contest_id)
@@ -291,28 +291,28 @@ async def admin_contest_delete(event: MessageCallback, session: AsyncSession):
     )
 
 
-@admin.message_callback(F.callback.payload.startswith('admin_contest_pending_'))
+@admin.message_callback(F.callback.payload.startswith('admin_contest_pending_'), IsAdmin())
 async def admin_contest_pending(event: MessageCallback, session: AsyncSession):
     await event.message.delete()
     contest_id = int(event.callback.payload.split('_')[3])
     await _show_moderation_page(event, session, 'pending', 0, contest_id)
 
 
-@admin.message_callback(F.callback.payload.startswith('admin_contest_approved_'))
+@admin.message_callback(F.callback.payload.startswith('admin_contest_approved_'), IsAdmin())
 async def admin_contest_approved(event: MessageCallback, session: AsyncSession):
     await event.message.delete()
     contest_id = int(event.callback.payload.split('_')[3])
     await _show_moderation_page(event, session, 'approved', 0, contest_id)
 
 
-@admin.message_callback(F.callback.payload.startswith('admin_contest_rejected_'))
+@admin.message_callback(F.callback.payload.startswith('admin_contest_rejected_'), IsAdmin())
 async def admin_contest_rejected(event: MessageCallback, session: AsyncSession):
     await event.message.delete()
     contest_id = int(event.callback.payload.split('_')[3])
     await _show_moderation_page(event, session, 'rejected', 0, contest_id)
 
 
-@admin.message_callback(F.callback.payload.startswith('admin_contest_page_'))
+@admin.message_callback(F.callback.payload.startswith('admin_contest_page_'), IsAdmin())
 async def admin_contest_page(event: MessageCallback, session: AsyncSession):
     await event.message.delete()
     parts = event.callback.payload.split('_')
@@ -353,7 +353,7 @@ async def _show_moderation_page(event, session: AsyncSession, status: str, page:
         await _send_work_card(event, work, page, total_pages, status, contest_obj.id)
 
 
-@admin.message_callback(F.callback.payload.startswith('admin_work_approve_'))
+@admin.message_callback(F.callback.payload.startswith('admin_work_approve_'), IsAdmin())
 async def admin_work_approve(event: MessageCallback, session: AsyncSession):
     work_id = int(event.callback.payload.split('_')[-1])
     work = await crq.update_work_status(session, work_id, 'approved')
@@ -371,7 +371,7 @@ async def admin_work_approve(event: MessageCallback, session: AsyncSession):
             logger.exception('Не удалось уведомить автора работы %s', work_id)
 
 
-@admin.message_callback(F.callback.payload.startswith('admin_work_reject_'))
+@admin.message_callback(F.callback.payload.startswith('admin_work_reject_'), IsAdmin())
 async def admin_work_reject(event: MessageCallback, session: AsyncSession):
     work_id = int(event.callback.payload.split('_')[-1])
     work = await crq.update_work_status(session, work_id, 'rejected')
@@ -389,7 +389,7 @@ async def admin_work_reject(event: MessageCallback, session: AsyncSession):
             logger.exception('Не удалось уведомить автора работы %s', work_id)
 
 
-@admin.message_callback(F.callback.payload.startswith('admin_work_proof_'))
+@admin.message_callback(F.callback.payload.startswith('admin_work_proof_'), IsAdmin())
 async def admin_work_proof(event: MessageCallback, session: AsyncSession):
     work_id = int(event.callback.payload.split('_')[-1])
     work = await crq.update_work_status(session, work_id, 'need_proof')
@@ -409,7 +409,7 @@ async def admin_work_proof(event: MessageCallback, session: AsyncSession):
         pass
 
 
-@admin.message_callback(F.callback.payload.startswith('admin_contest_vote_open_'))
+@admin.message_callback(F.callback.payload.startswith('admin_contest_vote_open_'), IsAdmin())
 async def admin_contest_vote_open(event: MessageCallback, session: AsyncSession):
     contest_id = int(event.callback.payload.split('_')[4])
     contest_obj = await crq.get_active_contest(session, contest_id)
@@ -421,7 +421,7 @@ async def admin_contest_vote_open(event: MessageCallback, session: AsyncSession)
                                attachments=[await kb.contest_admin_kb(True, contest_obj.id, contest_obj.results_published)])
 
 
-@admin.message_callback(F.callback.payload.startswith('admin_contest_vote_close_'))
+@admin.message_callback(F.callback.payload.startswith('admin_contest_vote_close_'), IsAdmin())
 async def admin_contest_vote_close(event: MessageCallback, session: AsyncSession):
     contest_id = int(event.callback.payload.split('_')[4])
     contest_obj = await crq.get_active_contest(session, contest_id)
@@ -433,20 +433,66 @@ async def admin_contest_vote_close(event: MessageCallback, session: AsyncSession
                                attachments=[await kb.contest_admin_kb(False, contest_obj.id, contest_obj.results_published)])
 
 
-@admin.message_callback(F.callback.payload.startswith('admin_contest_publish_'))
+async def _notify_participants_results(event, session: AsyncSession, contest_obj):
+    """Отправляет персональные уведомления участникам конкурса
+    об опубликованных результатах."""
+    results = await crq.get_results(session, contest_obj.id)
+
+    place_map: dict[int, int] = {}
+    for _category, rows in results.get('by_category', {}).items():
+        for idx, (work, _votes) in enumerate(rows, start=1):
+            place_map[work.id] = idx
+
+    # на каждого участника — одно сообщение по его лучшей работе
+    best_by_user: dict[int, tuple] = {}
+    for work, votes in results.get('all', []):
+        current = best_by_user.get(work.user_id)
+        if current is None or votes > current[1]:
+            best_by_user[work.user_id] = (work, votes)
+
+    medals = {1: '🥇', 2: '🥈', 3: '🥉'}
+    title = contest_obj.title or 'Конкурс'
+
+    for user_id, (work, votes) in best_by_user.items():
+        place = place_map.get(work.id)
+        if place in medals:
+            place_line = f'{medals[place]} {place} место'
+        elif place:
+            place_line = f'{place} место'
+        else:
+            place_line = f'{votes} голосов'
+
+        text = (
+            f'🏅 Результаты конкурса «{title}» опубликованы!\n\n'
+            f'Ваша работа №{work.number:03d} «{work.title}» набрала {votes} голосов '
+            f'и заняла {place_line} в своей категории.\n\n'
+            'Спасибо за участие! 💛'
+        )
+        try:
+            await event.bot.send_message(chat_id=user_id, text=text)
+        except Exception:
+            logger.exception('Не удалось уведомить участника %s конкурса %s', user_id, contest_obj.id)
+
+
+@admin.message_callback(F.callback.payload.startswith('admin_contest_publish_'), IsAdmin())
 async def admin_contest_publish(event: MessageCallback, session: AsyncSession):
     contest_id = int(event.callback.payload.split('_')[3])
     contest_obj = await crq.get_active_contest(session, contest_id)
     if not contest_obj:
         await event.message.answer('Конкурс не найден.')
         return
+
+    was_published = contest_obj.results_published
     await crq.set_results_published(session, contest_obj.id, True)
     await event.message.delete()
     await event.message.answer('📢 Результаты опубликованы — участники увидят их в конкурсе.',
                                attachments=[await kb.contest_admin_kb(contest_obj.voting_open, contest_obj.id, True)])
 
+    if not was_published:
+        await _notify_participants_results(event, session, contest_obj)
 
-@admin.message_callback(F.callback.payload.startswith('admin_contest_unpublish_'))
+
+@admin.message_callback(F.callback.payload.startswith('admin_contest_unpublish_'), IsAdmin())
 async def admin_contest_unpublish(event: MessageCallback, session: AsyncSession):
     contest_id = int(event.callback.payload.split('_')[3])
     contest_obj = await crq.get_active_contest(session, contest_id)
@@ -459,7 +505,7 @@ async def admin_contest_unpublish(event: MessageCallback, session: AsyncSession)
                                attachments=[await kb.contest_admin_kb(contest_obj.voting_open, contest_obj.id, False)])
 
 
-@admin.message_callback(F.callback.payload.startswith('admin_contest_results'))
+@admin.message_callback(F.callback.payload.startswith('admin_contest_results'), IsAdmin())
 async def admin_contest_results(event: MessageCallback, session: AsyncSession):
     await event.message.delete()
     contest_id = int(event.callback.payload.split('_')[3])
@@ -513,7 +559,7 @@ def build_results_csv(results: list) -> bytes:
     return buffer.getvalue().encode('utf-8-sig')
 
 
-@admin.message_callback(F.callback.payload.startswith('admin_contest_export'))
+@admin.message_callback(F.callback.payload.startswith('admin_contest_export'), IsAdmin())
 async def admin_contest_export(event: MessageCallback, session: AsyncSession):
     # payload вида: admin_contest_export_<contest_id>
     try:

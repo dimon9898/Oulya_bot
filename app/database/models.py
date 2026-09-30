@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy import String, DateTime, BigInteger, ForeignKey, Numeric
+from sqlalchemy import String, DateTime, BigInteger, ForeignKey, Numeric, Index
 from datetime import datetime
 
 from app.database.base import Base
@@ -38,6 +38,9 @@ class Contest(Base):
 
 class ContestWork(Base):
     __tablename__ = 'contest_works'
+    __table_args__ = (
+        Index('uq_contest_works_contest_number', 'contest_id', 'number', unique=True),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True)  # Внутренний ID работы
     contest_id: Mapped[int] = mapped_column(ForeignKey('contests.id'))  # ID конкурса, к которому относится работа
@@ -62,6 +65,9 @@ class ContestWork(Base):
 
 class ContestVoteSession(Base):
     __tablename__ = 'contest_vote_sessions'
+    __table_args__ = (
+        Index('uq_contest_vote_sessions_contest_user', 'contest_id', 'user_id', unique=True),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True)  # Внутренний ID сессии голосования
     contest_id: Mapped[int] = mapped_column(ForeignKey('contests.id'))  # ID конкурса, в котором голосует пользователь
@@ -76,6 +82,9 @@ class ContestVoteSession(Base):
 
 class ContestVote(Base):
     __tablename__ = 'contest_votes'
+    __table_args__ = (
+        Index('uq_contest_votes_contest_work_user', 'contest_id', 'work_id', 'user_id', unique=True),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True)  # Внутренний ID голоса
     contest_id: Mapped[int] = mapped_column(ForeignKey('contests.id'))  # ID конкурса, в рамках которого отдан голос
