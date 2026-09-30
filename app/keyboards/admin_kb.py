@@ -42,7 +42,7 @@ async def update_statistics_btn():
     return kb.adjust(1).as_markup()
 
 
-async def contest_admin_kb(voting_open: bool, contest_id: int):
+async def contest_admin_kb(voting_open: bool, contest_id: int, results_published: bool = False):
     kb = InlineKeyboardBuilder()
     kb.add(CallbackButton(text='📥 Заявки на модерации', payload=f'admin_contest_pending_{contest_id}'))
     kb.add(CallbackButton(text='✅ Допущенные работы', payload=f'admin_contest_approved_{contest_id}'))
@@ -52,12 +52,16 @@ async def contest_admin_kb(voting_open: bool, contest_id: int):
     else:
         kb.add(CallbackButton(text='🗳 Открыть голосование', payload=f'admin_contest_vote_open_{contest_id}'))
     kb.add(CallbackButton(text='📊 Результаты', payload=f'admin_contest_results_{contest_id}'))
+    if results_published:
+        kb.add(CallbackButton(text='🙈 Скрыть результаты', payload=f'admin_contest_unpublish_{contest_id}'))
+    else:
+        kb.add(CallbackButton(text='📢 Опубликовать результаты', payload=f'admin_contest_publish_{contest_id}'))
     kb.add(CallbackButton(text='📤 Выгрузить CSV', payload=f'admin_contest_export_{contest_id}'))
     kb.add(CallbackButton(text='✏️ Изменить название', payload=f'admin_contest_edit_title_{contest_id}'))
     kb.add(CallbackButton(text='✏️ Изменить описание', payload=f'admin_contest_edit_description_{contest_id}'))
     kb.add(CallbackButton(text='🗑 Удалить конкурс', payload=f'admin_contest_delete_{contest_id}'))
     kb.add(CallbackButton(text='⬅ назад', payload='back_to_admin_main'))
-    return kb.adjust(1, 1, 1, 1, 2, 2, 1, 1).as_markup()
+    return kb.adjust(1, 1, 1, 1, 2, 1, 2, 1, 1).as_markup()
 
 
 async def contest_moderation_kb(work_id: int, page: int, total_pages: int, status: str, contest_id: int):

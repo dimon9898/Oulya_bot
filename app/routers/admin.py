@@ -119,7 +119,7 @@ async def save_contest_title(event: MessageCreated, session: AsyncSession, conte
         await asyncio.sleep(1)
         await event.message.answer('Панель конкурса', 
                                    attachments=[ 
-                                       await kb.contest_admin_kb(result.contest.voting_open, result.contest.id)
+                                       await kb.contest_admin_kb(result.contest.voting_open, result.contest.id, result.contest.results_published)
                                     ])
     else:
         await event.message.answer('Ошибка при обновление название конкурса!')
@@ -150,7 +150,7 @@ async def save_contest_description(event: MessageCreated, session: AsyncSession,
         await event.message.answer('Описание конкурса обновлено! ✅')
         await asyncio.sleep(1)
         await event.message.answer('Панель конкурса', attachments=[
-            await kb.contest_admin_kb(result.contest.voting_open, result.contest.id)
+            await kb.contest_admin_kb(result.contest.voting_open, result.contest.id, result.contest.results_published)
         ])
     else:
         await event.message.answer('Ошибка при обновление описание конкурса!')
@@ -265,7 +265,7 @@ async def admin_select_contest(event: MessageCallback, session: AsyncSession):
         return
     await event.message.answer(
         text=f'<b>🏆 Управление конкурсом</b>\n\n{contest_obj.title or ""}',
-        attachments=[await kb.contest_admin_kb(contest_obj.voting_open, contest_obj.id)],
+        attachments=[await kb.contest_admin_kb(contest_obj.voting_open, contest_obj.id, contest_obj.results_published)],
         parse_mode=ParseMode.HTML,
     )
 
@@ -332,7 +332,7 @@ async def _show_moderation_page(event, session: AsyncSession, status: str, page:
     if total == 0:
         await event.message.answer(
             f'Нет работ со статусом «{crq.STATUS_LABELS.get(status, status)}».',
-            attachments=[await kb.contest_admin_kb(contest_obj.voting_open, contest_obj.id)],
+            attachments=[await kb.contest_admin_kb(contest_obj.voting_open, contest_obj.id, contest_obj.results_published)],
         )
         return
 
@@ -356,15 +356,37 @@ async def _show_moderation_page(event, session: AsyncSession, status: str, page:
 @admin.message_callback(F.callback.payload.startswith('admin_work_approve_'))
 async def admin_work_approve(event: MessageCallback, session: AsyncSession):
     work_id = int(event.callback.payload.split('_')[-1])
-    await crq.update_work_status(session, work_id, 'approved')
+    work = await crq.update_work_status(session, work_id, 'approved')
     await event.message.edit(text='✅ Работа допущена.', attachments=[await kb.back_to_admin_contest_manage()])
+    if work:
+        try:
+            await event.bot.send_message(
+                chat_id=work.user_id,
+                text=(
+                    f'🎉 Ваша работа №{work.number:03d} «{work.title}» допущена к конкурсу!\n'
+                    'Теперь её можно увидеть в разделе «Все работы», и за неё можно голосовать.'
+                ),
+            )
+        except Exception:
+            logger.exception('Не удалось уведомить автора работы %s', work_id)
 
 
 @admin.message_callback(F.callback.payload.startswith('admin_work_reject_'))
 async def admin_work_reject(event: MessageCallback, session: AsyncSession):
     work_id = int(event.callback.payload.split('_')[-1])
-    await crq.update_work_status(session, work_id, 'rejected')
+    work = await crq.update_work_status(session, work_id, 'rejected')
     await event.message.edit(text='❌ Работа отклонена.', attachments=[await kb.back_to_admin_contest_manage()])
+    if work:
+        try:
+            await event.bot.send_message(
+                chat_id=work.user_id,
+                text=(
+                    f'😔 К сожалению, ваша работа №{work.number:03d} «{work.title}» отклонена модератором.\n'
+                    'Вы можете отправить новую работу, пока приём заявок открыт.'
+                ),
+            )
+        except Exception:
+            logger.exception('Не удалось уведомить автора работы %s', work_id)
 
 
 @admin.message_callback(F.callback.payload.startswith('admin_work_proof_'))
@@ -396,7 +418,7 @@ async def admin_contest_vote_open(event: MessageCallback, session: AsyncSession)
     await crq.set_voting_open(session, contest_obj.id, True)
     await event.message.delete()
     await event.message.answer('🗳 Голосование открыто.',
-                               attachments=[await kb.contest_admin_kb(True, contest_obj.id)])
+                               attachments=[await kb.contest_admin_kb(True, contest_obj.id, contest_obj.results_published)])
 
 
 @admin.message_callback(F.callback.payload.startswith('admin_contest_vote_close_'))
@@ -408,7 +430,33 @@ async def admin_contest_vote_close(event: MessageCallback, session: AsyncSession
     await crq.set_voting_open(session, contest_obj.id, False)
     await event.message.delete()
     await event.message.answer('🔒 Голосование закрыто.',
-                               attachments=[await kb.contest_admin_kb(False, contest_obj.id)])
+                               attachments=[await kb.contest_admin_kb(False, contest_obj.id, contest_obj.results_published)])
+
+
+@admin.message_callback(F.callback.payload.startswith('admin_contest_publish_'))
+async def admin_contest_publish(event: MessageCallback, session: AsyncSession):
+    contest_id = int(event.callback.payload.split('_')[3])
+    contest_obj = await crq.get_active_contest(session, contest_id)
+    if not contest_obj:
+        await event.message.answer('Конкурс не найден.')
+        return
+    await crq.set_results_published(session, contest_obj.id, True)
+    await event.message.delete()
+    await event.message.answer('📢 Результаты опубликованы — участники увидят их в конкурсе.',
+                               attachments=[await kb.contest_admin_kb(contest_obj.voting_open, contest_obj.id, True)])
+
+
+@admin.message_callback(F.callback.payload.startswith('admin_contest_unpublish_'))
+async def admin_contest_unpublish(event: MessageCallback, session: AsyncSession):
+    contest_id = int(event.callback.payload.split('_')[3])
+    contest_obj = await crq.get_active_contest(session, contest_id)
+    if not contest_obj:
+        await event.message.answer('Конкурс не найден.')
+        return
+    await crq.set_results_published(session, contest_obj.id, False)
+    await event.message.delete()
+    await event.message.answer('🙈 Результаты скрыты от участников.',
+                               attachments=[await kb.contest_admin_kb(contest_obj.voting_open, contest_obj.id, False)])
 
 
 @admin.message_callback(F.callback.payload.startswith('admin_contest_results'))
@@ -490,7 +538,7 @@ async def admin_contest_export(event: MessageCallback, session: AsyncSession):
 
     try:
         await event.message.answer(
-            text=f'📤 Выгрузка результатов конкурса «{contest_obj.id}»:',
+            text=f'📤 Выгрузка результатов конкурса «{contest_obj.title or contest_obj.id}»:',
             attachments=[
                 InputMediaBuffer(
                     buffer=csv_bytes,

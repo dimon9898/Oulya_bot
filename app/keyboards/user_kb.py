@@ -125,7 +125,7 @@ async def client_feedback_kb():
     return kb.adjust(1).as_markup()
 
 
-async def contest_main_kb(submission_open: bool, voting_open: bool, has_finished_vote: bool, contest_id: int):
+async def contest_main_kb(submission_open: bool, voting_open: bool, has_finished_vote: bool, contest_id: int, results_published: bool = False):
     kb = InlineKeyboardBuilder()
     if submission_open:
         kb.add(CallbackButton(text='📝 Участвовать в конкурсе', payload=f'contest_submit_{contest_id}'))
@@ -133,6 +133,8 @@ async def contest_main_kb(submission_open: bool, voting_open: bool, has_finished
         kb.add(CallbackButton(text='🗳 Голосовать', payload=f'contest_vote_start_{contest_id}'))
     if voting_open and has_finished_vote:
         kb.add(CallbackButton(text='✅ Вы уже проголосовали', payload='contest_already_voted'))
+    if results_published:
+        kb.add(CallbackButton(text='🏅 Результаты конкурса', payload=f'contest_results_{contest_id}'))
     kb.add(CallbackButton(text='🖼 Все работы', payload=f'contest_all_works_{contest_id}'))
     kb.add(CallbackButton(text='🔍 Найти работу по номеру', payload=f'contest_find_work_{contest_id}'))
     kb.add(CallbackButton(text='📋 Мои голоса', payload=f'contest_my_votes_{contest_id}'))

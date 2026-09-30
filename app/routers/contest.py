@@ -73,7 +73,7 @@ async def _send_contest_main(event, session: AsyncSession, contest_id: int, cont
     )
     await event.message.answer(
         text=text,
-        attachments=[await kb.contest_main_kb(submission_open, voting_open, has_finished, contest_id)],
+        attachments=[await kb.contest_main_kb(submission_open, voting_open, has_finished, contest_id, contest_obj.results_published)],
         parse_mode=ParseMode.HTML,
     )
 
@@ -103,6 +103,44 @@ async def contest_rules(event: MessageCallback, session: AsyncSession):
     contest_obj = await crq.get_active_contest(session, contest_id)
     rules = (contest_obj.rules if contest_obj and contest_obj.rules else 'Правила конкурса пока не заданы.')
     await event.message.answer(text=rules, attachments=[await kb.contest_back_kb()])
+
+
+@contest.message_callback(F.callback.payload.startswith('contest_results_'))
+async def contest_results(event: MessageCallback, session: AsyncSession):
+    await event.message.delete()
+    contest_id = int(event.callback.payload.split('_')[2])
+    contest_obj = await crq.get_active_contest(session, contest_id)
+    if not contest_obj:
+        await event.message.answer('Конкурс не найден.')
+        return
+    if not contest_obj.results_published:
+        await event.message.answer('Результаты конкурса ещё не опубликованы.',
+                                   attachments=[await kb.contest_back_kb(f'contest_active_{contest_id}')])
+        return
+
+    results = await crq.get_results(session, contest_obj.id)
+    if not results['all']:
+        await event.message.answer('В конкурсе пока нет работ.',
+                                   attachments=[await kb.contest_back_kb(f'contest_active_{contest_id}')])
+        return
+
+    medals = {1: '🥇', 2: '🥈', 3: '🥉'}
+    text = '<b>🏅 Результаты конкурса</b>\n\n'
+    for category, label in crq.CATEGORY_LABELS.items():
+        text += f'<b>🏆 {label}</b>\n'
+        cat_rows = results['by_category'].get(category, [])
+        if not cat_rows:
+            text += '— нет работ\n\n'
+            continue
+        for place, (work, votes) in enumerate(cat_rows[:3], start=1):
+            text += f'{medals.get(place, "•")} №{work.number:03d} «{work.title}» — {votes} голосов\n'
+        text += '\n'
+
+    await event.message.answer(
+        text=text,
+        attachments=[await kb.contest_back_kb(f'contest_active_{contest_id}')],
+        parse_mode=ParseMode.HTML,
+    )
 
 
 @contest.message_callback(F.callback.payload.startswith('contest_all_works_'))
@@ -240,7 +278,6 @@ async def contest_my_votes(event: MessageCallback, session: AsyncSession):
 async def contest_submit_start(event: MessageCallback, session: AsyncSession, context: MemoryContext):
     logger.info(f'contest_submit нажат пользователем {event.from_user.user_id}')
     contest_id = int(event.callback.payload.split('_')[2])
-    await context.update_data(contest_id=contest_id)
     try:
         await event.message.delete()
     except Exception as exc:
@@ -276,6 +313,7 @@ async def contest_submit_start(event: MessageCallback, session: AsyncSession, co
         return
 
     await context.clear()
+    await context.update_data(contest_id=contest_id)
     await event.message.answer('Введите имя автора работы:',
                                attachments=[await kb.contest_submit_cancel_kb()])
     await context.set_state(SubmitState.author_name)
@@ -572,6 +610,10 @@ async def contest_select(event: MessageCallback, session: AsyncSession):
     await event.message.delete()
     work_id = int(event.callback.payload.split('_')[-1])
     work = await crq.get_work_by_id(session, work_id)
+    if not work:
+        await event.message.answer('Работа не найдена.',
+                                   attachments=[await kb.contest_back_kb()])
+        return
     contest_obj = await crq.get_active_contest(session, work.contest.id)
     vote_session = await crq.get_vote_session(session, contest_obj.id, event.from_user.user_id)
     if not vote_session:
@@ -589,6 +631,10 @@ async def contest_unselect(event: MessageCallback, session: AsyncSession):
     await event.message.delete()
     work_id = int(event.callback.payload.split('_')[-1])
     work = await crq.get_work_by_id(session, work_id)
+    if not work:
+        await event.message.answer('Работа не найдена.',
+                                   attachments=[await kb.contest_back_kb()])
+        return
     contest_obj = await crq.get_active_contest(session, work.contest.id)
     vote_session = await crq.get_vote_session(session, contest_obj.id, event.from_user.user_id)
     if not vote_session:
