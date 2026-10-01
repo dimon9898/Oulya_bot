@@ -18,7 +18,7 @@ async def bot_set_commands():
     ]
 
     try:
-        await bot.set_my_commands(*commands)
+        await bot.set_commands(*commands)
     except Exception:
         # Регистрация команд — некритичный шаг, без неё бот работает.
         # maxapi==0.9.17 обращается к /me, и текущий MAX API отвечает
