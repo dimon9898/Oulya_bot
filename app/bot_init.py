@@ -20,8 +20,4 @@ async def bot_set_commands():
     try:
         await bot.set_commands(*commands)
     except Exception:
-        # Регистрация команд — некритичный шаг, без неё бот работает.
-        # maxapi==0.9.17 обращается к /me, и текущий MAX API отвечает
-        # 404 method.not.found. Без этого try/except падал бы весь
-        # startup приложения.
         logger.exception('Не удалось зарегистрировать команды бота, продолжаем без них')

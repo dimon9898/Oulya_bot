@@ -143,7 +143,7 @@ async def contest_results(event: MessageCallback, session: AsyncSession):
         has_any_votes = True
         for work, votes, place in cat_rows:
             medal = medals.get(place, '•')
-            text += f'{medal} №{work.number:03d} «{work.title}» — {votes} голосов\n'
+            text += f'{medal} №{work.number:03d} | {work.author_name} | «{work.title}» — {votes} голосов\n'
         text += '\n'
 
     if not has_any_votes:
