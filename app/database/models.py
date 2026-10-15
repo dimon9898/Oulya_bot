@@ -23,7 +23,7 @@ class Contest(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)  # Внутренний ID конкурса
     enabled: Mapped[bool] = mapped_column(default=False)  # Включён ли конкурс (виден ли пользователям)
-    description: Mapped[str] = mapped_column(String(1024), nullable=True)  # Описание конкурса
+    description: Mapped[str] = mapped_column(String, nullable=True)  # Описание конкурса
     title: Mapped[str] = mapped_column(String(128), nullable=True)  # Название конкурса
     rules: Mapped[str] = mapped_column(String(2048), nullable=True)  # Правила участия в конкурсе
     submission_start: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)  # Дата/время начала приёма работ
