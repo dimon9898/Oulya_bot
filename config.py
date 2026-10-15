@@ -35,7 +35,7 @@ class Settings(BaseSettings):
         return [int(admin_id.strip()) for admin_id in value.split(',')]
 
 
-    model_config = SettingsConfigDict(env_file='.env', env_file_encoding='utf-8')
+    model_config = SettingsConfigDict(env_file='.env', env_file_encoding='utf-8', extra='ignore')
 
 
 settings = Settings()
