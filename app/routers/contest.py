@@ -501,6 +501,8 @@ async def _send_vote_card(event, session: AsyncSession, vote_session):
 
     is_selected = work.id in selected
     is_last = index == len(order) - 1
+    # Разрешаем «🏁 Завершить досмотр» досрочно, как только набран минимум голосов.
+    can_finish = len(selected) >= settings.CONTEST_MIN_VOTES
     caption = _work_caption(work, index + 1, len(order))
 
     await event.message.answer(
@@ -510,7 +512,7 @@ async def _send_vote_card(event, session: AsyncSession, vote_session):
                 type=UploadType.IMAGE,
                 payload=AttachmentPayload(token=work.final_photo),
             ),
-            await kb.contest_work_card_kb(work.id, is_selected, is_last, work.contest.id),
+            await kb.contest_work_card_kb(work.id, is_selected, is_last, work.contest.id, can_finish),
         ],
         parse_mode=ParseMode.HTML,
     )

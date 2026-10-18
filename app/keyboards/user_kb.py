@@ -159,26 +159,41 @@ async def contest_categories_kb(contest_id):
     kb.add(CallbackButton(text='До 10 лет', payload=f'contest_cat_child_{contest_id}'))
     kb.add(CallbackButton(text='11–17 лет', payload=f'contest_cat_teen_{contest_id}'))
     kb.add(CallbackButton(text='18+', payload=f'contest_cat_adult_{contest_id}'))
-    kb.add(CallbackButton(text='⬅ назад', payload=f'contest_active__{contest_id}'))
+    kb.add(CallbackButton(text='⬅ назад', payload=f'contest_active_{contest_id}'))
     return kb.adjust(2, 2, 1).as_markup()
 
 
-async def contest_work_card_kb(work_id: int, is_selected: bool, is_last: bool, contest_id: int):
+async def contest_work_card_kb(
+    work_id: int,
+    is_selected: bool,
+    is_last: bool,
+    contest_id: int,
+    can_finish: bool = False,
+):
     kb = InlineKeyboardBuilder()
     if is_selected:
         kb.add(CallbackButton(text='☑ Выбрано', payload=f'contest_unselect_{work_id}'))
     else:
         kb.add(CallbackButton(text='❤️ Выбрать', payload=f'contest_select_{work_id}'))
 
-
-    kb.add(CallbackButton(text='Пред ', payload=f'contest_vote_prev_{contest_id}'))
+    kb.add(CallbackButton(text='⬅️ Пред', payload=f'contest_vote_prev_{contest_id}'))
 
     if is_last:
         kb.add(CallbackButton(text='🏁 Завершить', payload=f'contest_vote_finish_{contest_id}'))
     else:
         kb.add(CallbackButton(text='➡️ След', payload=f'contest_vote_next_{contest_id}'))
+
+    # На последней карточке кнопка «Завершить» уже есть в навигационном ряду.
+    # На остальных — показываем «🏁 Завершить досмотр», если минимум голосов набран,
+    # чтобы пользователь не листал оставшиеся работы зря.
+    if can_finish and not is_last:
+        kb.add(CallbackButton(text='🏁 Завершить досмотр', payload=f'contest_vote_finish_{contest_id}'))
+
     kb.add(CallbackButton(text='⏸ Вернуться позже', payload=f'contest_vote_pause_{contest_id}'))
     kb.add(CallbackButton(text='⬅️ Меню', payload='back_to_user_main'))
+
+    if can_finish and not is_last:
+        return kb.adjust(1, 2, 1, 1, 1).as_markup()
     return kb.adjust(1, 2, 1, 1).as_markup()
 
 
