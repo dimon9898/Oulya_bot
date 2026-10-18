@@ -466,6 +466,11 @@ async def update_contest_dates(
     voting_start: datetime | None = None,
     voting_end: datetime | None = None,
 ) -> bool:
+    """Обновляет указанные даты этапов.
+
+    Внимание: параметр со значением ``None`` считается «не менять»,
+    поэтому для сброса используйте :func:`reset_contest_dates`.
+    """
     contest = await get_contest_by_id(db, contest_id)
     if not contest:
         return False
@@ -477,5 +482,18 @@ async def update_contest_dates(
         contest.voting_start = voting_start
     if voting_end is not None:
         contest.voting_end = voting_end
+    await db.commit()
+    return True
+
+
+async def reset_contest_dates(db: AsyncSession, contest_id: int) -> bool:
+    """Сбрасывает все даты этапов конкурса в ``None`` («без ограничения»)."""
+    contest = await get_contest_by_id(db, contest_id)
+    if not contest:
+        return False
+    contest.submission_start = None
+    contest.submission_end = None
+    contest.voting_start = None
+    contest.voting_end = None
     await db.commit()
     return True
