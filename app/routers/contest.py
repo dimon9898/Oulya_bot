@@ -437,6 +437,14 @@ async def submit_confirm(event: MessageCallback, session: AsyncSession, context:
         await event.message.answer('Конкурс не найден.')
         return
 
+    # Перепроверяем дедлайн приёма работ: пользователь мог начать заявку до
+    # submission_end, а подтвердить уже после закрытия — работу не создаём.
+    if not crq.is_submission_open(contest_obj):
+        await context.clear()
+        await event.message.answer('Приём работ сейчас закрыт.',
+                                   attachments=[await kb.contest_back_kb()])
+        return
+
     work = await crq.create_work(
         db=session,
         contest_id=contest_obj.id,
@@ -713,6 +721,13 @@ async def contest_vote_submit(event: MessageCallback, session: AsyncSession):
     vote_session = await crq.get_vote_session(session, contest_obj.id, event.from_user.user_id)
     if not vote_session or vote_session.is_finished:
         await event.message.answer('Голосование уже завершено.',
+                                   attachments=[await kb.contest_back_kb()])
+        return
+
+    # Не даём сохранить голоса после закрытия окна голосования
+    # (voting_end или снятия флага voting_open админом).
+    if not crq.is_voting_open(contest_obj):
+        await event.message.answer('Голосование сейчас закрыто. Сохранить голоса нельзя.',
                                    attachments=[await kb.contest_back_kb()])
         return
 
