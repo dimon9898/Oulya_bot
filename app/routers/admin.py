@@ -88,7 +88,7 @@ async def _apply_contest_state(event: MessageCallback, session: AsyncSession, ac
     """Включает/отключает текущий (id=1) конкурс.
 
     Оставленная для обратной совместимости функция — новые кнопки
-    работают через ``admin_contest_toggle_*`` в конкретном конкурсе.
+    работают через admin_contest_toggle_* в конкретном конкурсе.
     """
     current = await rq.get_contest_status(session)
     if not current:
@@ -624,6 +624,10 @@ async def _notify_participants_results(event, session: AsyncSession, contest_obj
 
     Учитывает равенство голосов: работы с одинаковым числом голосов
     получают одно и то же место (олимпийское ранжирование).
+
+    Дополнительно уведомляет голосовавших, которые не подавали работу
+    (или чья работа не была допущена): у них нет «персонального» места,
+    поэтому им уходит благодарность за участие в голосовании.
     """
     results = await crq.get_results(session, contest_obj.id)
 
@@ -671,6 +675,29 @@ async def _notify_participants_results(event, session: AsyncSession, contest_obj
             await event.bot.send_message(chat_id=user_id, text=text)
         except Exception:
             logger.exception('Не удалось уведомить участника %s конкурса %s', user_id, contest_obj.id)
+
+    # Уведомляем голосовавших, которые не получили «участническое» уведомление:
+    # это те, кто только голосовал (или чья работа не была допущена).
+    try:
+        voter_ids = await crq.get_voter_ids(session, contest_obj.id)
+    except Exception:
+        logger.exception('Не удалось получить список голосовавших конкурса %s', contest_obj.id)
+        voter_ids = []
+
+    already_notified = set(best_by_user.keys())
+    for user_id in voter_ids:
+        if user_id in already_notified:
+            continue
+        try:
+            await event.bot.send_message(
+                chat_id=user_id,
+                text=(
+                    f'🏅 Результаты конкурса «{title}» опубликованы!\n\n'
+                    'Спасибо, что голосовали! 💛'
+                ),
+            )
+        except Exception:
+            logger.exception('Не удалось уведомить голосовавшего %s конкурса %s', user_id, contest_obj.id)
 
 
 @admin.message_callback(F.callback.payload.startswith('admin_contest_publish_'), IsAdmin())

@@ -393,6 +393,20 @@ async def get_user_votes(
     return list(result.all())
 
 
+async def get_voter_ids(db: AsyncSession, contest_id: int) -> list[int]:
+    """Возвращает ID пользователей, отдавших хотя бы один голос в конкурсе.
+
+    Используется для уведомления голосовавших (в т.ч. тех, кто не подавал работу)
+    после публикации результатов.
+    """
+    result = await db.scalars(
+        select(ContestVote.user_id)
+        .where(ContestVote.contest_id == contest_id)
+        .distinct()
+    )
+    return list(result.all())
+
+
 def assign_places(rows: list) -> list:
     """Присваивает места по числу голосов (олимпийское ранжирование).
 
@@ -468,8 +482,8 @@ async def update_contest_dates(
 ) -> bool:
     """Обновляет указанные даты этапов.
 
-    Внимание: параметр со значением ``None`` считается «не менять»,
-    поэтому для сброса используйте :func:`reset_contest_dates`.
+    Внимание: параметр со значением None считается «не менять»,
+    поэтому для сброса используйте reset_contest_dates.
     """
     contest = await get_contest_by_id(db, contest_id)
     if not contest:
@@ -487,7 +501,7 @@ async def update_contest_dates(
 
 
 async def reset_contest_dates(db: AsyncSession, contest_id: int) -> bool:
-    """Сбрасывает все даты этапов конкурса в ``None`` («без ограничения»)."""
+    """Сбрасывает все даты этапов конкурса в None («без ограничения»)."""
     contest = await get_contest_by_id(db, contest_id)
     if not contest:
         return False
