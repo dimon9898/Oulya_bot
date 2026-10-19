@@ -183,11 +183,11 @@ async def get_course_items(db: AsyncSession, course_id: int):
 
 
 
-async def get_contest_info(db: AsyncSession):
-    result = await db.scalars(select(Contest).where(Contest.id == 1))
-    contest = result.first()
+async def get_contests_info(db: AsyncSession):
+    result = await db.execute(select(Contest))
+    contests = result.scalars().all()
 
-    if not contest:
-        return False
+    if not contests:
+        return []
 
-    return contest
+    return contests

@@ -72,8 +72,15 @@ async def send_welcome(chat_id, bot):
 
 @user.message_callback(F.callback.payload == 'user_start')
 async def start_handler(event: MessageCallback, session: AsyncSession):
-    await event.message.delete()
-    contest = await rq.get_contest_info(session)
+    try:
+        await event.message.delete()
+    except Exception:
+        pass
+    
+    contests = await rq.get_contests_info(session)
+
+    enabled = any(contest.enabled for contest in contests)
+
     await event.bot.send_message(chat_id=event.chat.chat_id, text='👋 Привет!\n\n'
                                             'Рада, что ты здесь — значит, наш набор уже у тебя в руках 🎁\n\n'
                                             'Этот бот — твой помощник по творчеству:\n\n'
@@ -83,7 +90,7 @@ async def start_handler(event: MessageCallback, session: AsyncSession):
                                             '🛍 Всё, что нужно для поделок\n\n'
                                             'Начни с бесплатного урока — он уже ждёт тебя 👇',
                                             attachments=[
-                                                await kb.user_main_kb(contest.enabled)
+                                                await kb.user_main_kb(enabled)
                                             ])
 
 
