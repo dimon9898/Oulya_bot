@@ -34,6 +34,19 @@ class FindState(StatesGroup):
     number = State()
 
 
+DEFAULT_RULES_TEXT = 'Правила конкурса пока не заданы.'
+
+
+def build_rules_text(contest_obj) -> str:
+    """Возвращает текст правил конкурса.
+
+    Если конкурс не найден или правила не заполнены — возвращает
+    заглушку по умолчанию. Хелпер добавлен, чтобы не повторять
+    тернарное выражение в нескольких местах.
+    """
+    return contest_obj.rules if contest_obj and contest_obj.rules else DEFAULT_RULES_TEXT
+
+
 def _work_caption(work, index: int, total: int) -> str:
     category = crq.CATEGORY_LABELS.get(work.category, work.category)
     return (
@@ -101,7 +114,7 @@ async def contest_rules(event: MessageCallback, session: AsyncSession):
     await event.message.delete()
     contest_id = int(event.callback.payload.split('_')[2])
     contest_obj = await crq.get_active_contest(session, contest_id)
-    rules = (contest_obj.rules if contest_obj and contest_obj.rules else 'Правила конкурса пока не заданы.')
+    rules = build_rules_text(contest_obj)
     await event.message.answer(text=rules, attachments=[await kb.contest_back_kb()])
 
 
