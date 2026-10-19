@@ -57,6 +57,7 @@ def _parse_datetime(raw: str):
 class Form(StatesGroup):
     title = State()
     description = State()
+    rules = State()
     date = State()
 
 
@@ -240,6 +241,40 @@ async def save_contest_description(event: MessageCreated, session: AsyncSession,
         await event.message.answer('Ошибка при обновление описание конкурса!')
 
     await context.clear()        
+
+
+
+@admin.message_callback(F.callback.payload.startswith('admin_contest_edit_rules_'), IsAdmin())
+async def edit_contest_rules_prompt(event: MessageCallback, session: AsyncSession, context: MemoryContext):
+    await event.message.delete()
+    contest_id = int(event.callback.payload.split('_')[4])
+    await event.message.answer('Введите правила участия в конкурсе: ')
+    await context.update_data(contest_id=contest_id)
+    await context.set_state(Form.rules)
+
+
+@admin.message_created(Form.rules, F.message.body.text, IsAdmin())
+async def save_contest_rules(event: MessageCreated, session: AsyncSession, context: MemoryContext):
+    await context.update_data(rules=event.message.body.text)
+    data = await context.get_data()
+    contest_id = int(data.get('contest_id', ''))
+    rules = data.get('rules', '')
+    result = await rq.update_contest_rules(session, contest_id, rules)
+    if result.is_updated:
+        await event.message.answer('Правила конкурса обновлены! ✅')
+        await asyncio.sleep(1)
+        await event.message.answer('Панель конкурса', attachments=[
+            await kb.contest_admin_kb(
+                result.contest.voting_open,
+                result.contest.id,
+                result.contest.results_published,
+                result.contest.enabled,
+            )
+        ])
+    else:
+        await event.message.answer('Ошибка при обновлении правил конкурса!')
+
+    await context.clear()
 
 
 

@@ -69,8 +69,9 @@ async def contest_admin_kb(
     kb.add(CallbackButton(text='📤 Выгрузить CSV', payload=f'admin_contest_export_{contest_id}'))
     kb.add(CallbackButton(text='✏️ Изменить название', payload=f'admin_contest_edit_title_{contest_id}'))
     kb.add(CallbackButton(text='✏️ Изменить описание', payload=f'admin_contest_edit_description_{contest_id}'))
+    kb.add(CallbackButton(text='📜 Изменить правила', payload=f'admin_contest_edit_rules_{contest_id}'))
     kb.add(CallbackButton(text='⬅ назад', payload='back_to_admin_main'))
-    return kb.adjust(1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 1).as_markup()
+    return kb.adjust(1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 1, 1).as_markup()
 
 
 async def admin_contest_dates_kb(contest_id: int):

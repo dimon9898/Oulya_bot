@@ -86,6 +86,21 @@ async def update_contest_description(db: AsyncSession, contest_id: int, descript
 
     return UpdateContest(contest=contest, is_updated=True)
 
+
+async def update_contest_rules(db: AsyncSession, contest_id: int, rules: str) -> UpdateContest:
+    result = await db.execute(select(Contest).where(Contest.id == contest_id))
+    contest = result.scalar_one_or_none()
+
+    if not contest:
+        return UpdateContest(contest=None, is_updated=False)
+
+    if contest.rules != rules:
+        contest.rules = rules
+        await db.commit()
+
+    return UpdateContest(contest=contest, is_updated=True)
+
+
 async def get_statistics_bot(db: AsyncSession):
         result = await db.execute(select(func.count(User.id)).where(User.is_active == True))
         count = result.scalar() or 0
@@ -108,5 +123,3 @@ async def get_statistics_bot(db: AsyncSession):
         sources = dict(sources_stmt.all())
 
         return {'count': count, 'total_sum': total_sum, 'new_users': new_users, 'payment_count': payment_count, 'sources': sources}
-
-        
