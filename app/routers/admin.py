@@ -481,7 +481,7 @@ async def admin_work_approve(event: MessageCallback, session: AsyncSession):
     if work:
         try:
             await event.bot.send_message(
-                chat_id=work.user_id,
+                user_id=work.user_id,
                 text=(
                     f'🎉 Ваша работа №{work.number:03d} «{work.title}» допущена к конкурсу!\n'
                     'Теперь её можно увидеть в разделе «Все работы», и за неё можно голосовать.'
