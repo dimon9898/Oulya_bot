@@ -20,7 +20,7 @@ class Settings(BaseSettings):
     REDIRECT_URL: str
     CONTEST_MIN_VOTES: int
     CONTEST_PAGE_SIZE: int
-
+    SUPPORT_URL: str
 
     @computed_field
     @property

@@ -22,7 +22,7 @@ async def user_main_kb(enabled: bool):
         kb.add(CallbackButton(text='🏆 КОНКУРС МЕСЯЦА', payload='client_contest'))
     kb.add(CallbackButton(text='🛍 Где купить материалы', payload='client_shop', intent=Intent.POSITIVE))
     kb.add(CallbackButton(text='📱 Соц сети', payload='client_social_site', intent=Intent.POSITIVE))
-    kb.add(CallbackButton(text='✉️ Написать нам', payload='client_feedback', intent=Intent.POSITIVE))
+    kb.add(LinkButton(text='✉️ Написать нам', url=settings.SUPPORT_URL, intent=Intent.POSITIVE))
     kb.add(LinkButton(text='📢 Перейти в канал', url=settings.CHANEL_LINK, intent=Intent.DEFAULT))
 
     if enabled:
